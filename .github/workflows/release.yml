@@ -53,5 +53,4 @@ jobs:
           gh release create "v$VERSION" dist/module.json dist/module.zip \
             --title "Talking Tokens v$VERSION (Beta)" \
             --notes "Foundry V14 beta. Discord voice bridge is not yet included; test using the GM settings window." \
-            --prerelease \
             --latest
