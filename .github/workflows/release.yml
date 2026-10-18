@@ -39,7 +39,7 @@ jobs:
           out = base / "dist"
           out.mkdir(exist_ok=True)
           manifest = json.loads((base / "module.json").read_text(encoding="utf-8"))
-          version = "0.1." + os.environ["GITHUB_RUN_NUMBER"]
+          version = manifest["version"]
           repo = "https://github.com/Daikaze/talking-tokens-v14."
           manifest["version"] = version
           manifest["manifest"] = repo + "/releases/latest/download/module.json"
