@@ -1,1 +1,166 @@
 .tt-settings-window .window-content{overflow:auto}.tt-form{padding:10px;display:flex;flex-direction:column;gap:14px}.tt-form section{padding:10px;border:1px solid var(--color-border-light-primary,#777);border-radius:8px}.tt-form h2{font-size:1.05rem}.tt-form .tt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tt-form label{display:block}.tt-form input:not([type=checkbox]),.tt-form select{width:100%;box-sizing:border-box}.tt-form .tt-user{display:grid;grid-template-columns:1fr .7fr 1.3fr 1.2fr 60px;gap:8px;align-items:center;margin:8px 0;padding:8px;border-bottom:1px solid #777}.tt-form .hint{opacity:.75;font-size:.85em;margin:5px 0}.tt-speaking{--tt-scale:1;position:fixed;z-index:5000;pointer-events:none;min-width:52px;height:36px;box-sizing:border-box;padding:7px 13px;border:2px solid #1b1b1b;border-radius:15px;background:#fff;color:#171717;box-shadow:0 3px 10px #0007;font-family:Arial,sans-serif;font-weight:900;font-size:18px;white-space:nowrap;line-height:20px;text-align:center;transform:translate(-50%,-115%) scale(var(--tt-scale));transform-origin:50% 100%;animation:tt-pulse 700ms ease-in-out infinite alternate}.tt-speaking:after{content:"";position:absolute;left:calc(50% - 5px);bottom:-9px;border:6px solid transparent;border-top:8px solid #fff;border-bottom:0}.tt-speaking[data-anchor=below]{transform:translate(-50%,15%) scale(var(--tt-scale));transform-origin:50% 0}.tt-speaking[data-anchor=below]:after{top:-9px;bottom:auto;border-top:0;border-bottom:8px solid #fff}.tt-speaking[data-anchor=left]{transform:translate(-110%,-50%) scale(var(--tt-scale))}.tt-speaking[data-anchor=right]{transform:translate(10%,-50%) scale(var(--tt-scale))}.tt-style-thought{border-style:dotted;border-radius:40%}.tt-style-shout{background:#fff5a3;border-radius:4px;clip-path:polygon(8% 0%,25% 8%,40% 0%,53% 8%,70% 0%,78% 10%,100% 4%,92% 40%,100% 74%,80% 87%,70% 100%,50% 91%,30% 100%,18% 88%,0 91%,8% 60%,0 30%)}.tt-style-whisper{opacity:.78;border-style:dashed}.tt-style-emote{background:#e7d7ff}@keyframes tt-pulse{from{filter:brightness(1)}to{filter:brightness(.94)}}
+
+/* Visual selector: inspired by the thumbnail grid in the original Talking Tokens. */
+.tt-style-settings .tt-choose-label {
+  font-size: .95em;
+  font-weight: 700;
+  margin: 7px 0 10px;
+}
+.tt-style-settings .tt-bubble-choices {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+  margin-bottom: 12px;
+}
+.tt-style-settings .tt-bubble-choice {
+  box-sizing: border-box;
+  height: 91px;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  background: rgba(255,255,255,.45);
+  border: 2px solid rgba(65,58,47,.5);
+  border-radius: 8px;
+  color: #1c2028;
+  cursor: pointer;
+  box-shadow: none;
+}
+.tt-style-settings .tt-bubble-choice:hover {
+  background: #fff4e2;
+  border-color: #b57631;
+}
+.tt-style-settings .tt-bubble-choice.is-selected {
+  background: #fff0d8;
+  border-color: #ef8a21;
+  box-shadow: 0 0 0 2px rgba(239,138,33,.20) inset;
+}
+.tt-style-settings .tt-bubble-choice:focus-visible {
+  outline: 3px solid #2878c8;
+  outline-offset: 2px;
+}
+.tt-style-settings .tt-bubble-choice-label {
+  line-height: 1;
+  font-size: .79rem;
+  font-weight: 700;
+  overflow: hidden;
+  max-width: 100%;
+  text-overflow: ellipsis;
+}
+.tt-style-settings .tt-bubble-thumbnail,
+.tt-style-settings .tt-bubble-preview {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  background: white;
+  border: 2px solid #20242b;
+  color: #1d2128;
+  box-shadow: 0 2px 3px rgba(0,0,0,.15);
+  font: 800 16px/1 Arial,sans-serif;
+  letter-spacing: 1px;
+  width: 49px;
+  height: 35px;
+  border-radius: 18px;
+}
+.tt-style-settings .tt-bubble-thumbnail::after,
+.tt-style-settings .tt-bubble-preview::after {
+  content: "";
+  position: absolute;
+  left: 9px;
+  bottom: -7px;
+  height: 9px;
+  width: 9px;
+  background: white;
+  border-left: 2px solid #20242b;
+  transform: skewY(-35deg);
+}
+.tt-style-settings .tt-style-chat {
+  border-radius: 8px;
+}
+.tt-style-settings .tt-style-chat::after {
+  left: auto;
+  right: 9px;
+  transform: skewY(35deg);
+  border-left: 0;
+  border-right: 2px solid #20242b;
+}
+.tt-style-settings .tt-style-thought {
+  border-style: dotted;
+  border-radius: 46%;
+  background: #fff;
+}
+.tt-style-settings .tt-style-thought::after {
+  left: 11px;
+  bottom: -12px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid #20242b;
+  border-radius: 50%;
+  transform: none;
+}
+.tt-style-settings .tt-style-shout {
+  clip-path: polygon(0 18%,18% 18%,12% 0,34% 12%,48% 0,63% 14%,80% 3%,85% 23%,100% 22%,91% 52%,100% 78%,77% 81%,72% 100%,51% 87%,28% 100%,21% 81%,0 75%,9% 47%);
+  border-radius: 0;
+  background: #fff0a7;
+  font-size: 24px;
+}
+.tt-style-settings .tt-style-shout::after {
+  content: none;
+}
+.tt-style-settings .tt-style-whisper {
+  border-style: dashed;
+  border-radius: 50%;
+  opacity: .85;
+}
+.tt-style-settings .tt-style-emote {
+  border-radius: 16px;
+  background: #eadcff;
+  font-size: 23px;
+}
+.tt-style-settings .tt-style-emote::after {
+  background: #eadcff;
+}
+.tt-style-settings .tt-bubble-preview-line {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  min-height: 68px;
+  padding: 13px 16px;
+  margin: 7px 0 9px;
+  border: 1px dashed rgba(95,87,73,.55);
+  border-radius: 8px;
+  background: rgba(255,255,255,.22);
+}
+.tt-style-settings .tt-bubble-preview {
+  width: 73px;
+  height: 49px;
+  border-width: 2.5px;
+  font-size: 23px;
+}
+.tt-style-settings .tt-bubble-preview.tt-style-shout {
+  font-size: 30px;
+}
+.tt-style-settings .tt-show-gm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tt-speaking.tt-style-speech {
+  border-radius: 50%;
+}
+.tt-speaking.tt-style-chat {
+  border-radius: 8px;
+}
+@media (max-width: 650px) {
+  .tt-style-settings .tt-bubble-choices {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
