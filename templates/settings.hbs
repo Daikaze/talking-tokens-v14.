@@ -1,11 +1,15 @@
 <form class="tt-form">
-  <section><h2>Bridge connection</h2>
-    <label><input type="checkbox" name="bridgeEnabled" {{#if cfg.bridgeEnabled}}checked{{/if}}> Connect to external voice bridge</label>
+  <section>
+    <h2>Discord Bridge</h2>
+    <div class="tt-bridge-bar">
+      <label><input type="checkbox" name="bridgeEnabled" {{#if cfg.bridgeEnabled}}checked{{/if}}> Connect to external voice bridge</label>
+      <span class="tt-bridge-badge" data-tt-bridge-status data-status="{{bridgeStatus}}">Checking connection…</span>
+    </div>
     <label>WebSocket URL <input name="bridgeUrl" value="{{cfg.bridgeUrl}}"></label>
-    <p class="hint">Optional. Discord voice detection requires a separate bridge application; this module alone cannot detect Discord speech.</p>
+    <p class="hint">The green indicator means the bridge reports that Discord voice is ready. Keep the Windows helper open during your D&amp;D session.</p>
   </section>
   <section class="tt-style-settings">
-    <h2>Bubble settings</h2>
+    <h2>Bubble Settings</h2>
     <div class="tt-choose-label">Choose a bubble style</div>
     <input type="hidden" name="style" value="{{cfg.style}}">
     <div class="tt-bubble-choices" role="group" aria-label="Bubble appearance">
@@ -26,22 +30,64 @@
       <span class="tt-bubble-preview tt-style-{{cfg.style}}" data-tt-selected-preview aria-hidden="true">{{selectedSymbol}}</span>
       <strong data-tt-selected-label>{{selectedStyle}}</strong>
     </div>
-    <p class="hint">Click a bubble to preview it. Save settings to use it in Discord or on the scene.</p>
     <div class="tt-grid">
-      <label>Position <select name="position">{{#each positions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{id}}</option>{{/each}}</select></label>
+      <label>Animation
+        <select name="animation">
+          {{#each animations}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{id}}</option>{{/each}}
+        </select>
+      </label>
+      <label>Position
+        <select name="position">
+          {{#each positions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{id}}</option>{{/each}}
+        </select>
+      </label>
       <label>Scale <input name="scale" type="number" min="0.5" max="3" step="0.1" value="{{cfg.scale}}"></label>
       <label>Bubble hold (ms) <input name="holdMs" type="number" min="300" max="10000" step="100" value="{{cfg.holdMs}}"></label>
       <label class="tt-show-gm"><input type="checkbox" name="showForGM" {{#if cfg.showForGM}}checked{{/if}}> Show for GM</label>
     </div>
+    <div class="tt-art-global">
+      <h3>Global custom bubble image</h3>
+      <p class="hint">Optional. Pick a transparent PNG, WebP or GIF uploaded to Foundry. This image replaces the default bubble for everyone unless they have a personal image.</p>
+      <div class="tt-file-input">
+        <input name="imagePath" data-tt-image-input type="text" value="{{cfg.imagePath}}" placeholder="Leave empty to use the selected bubble style">
+        <button type="button" data-tt-image-picker="imagePath" title="Browse images"><i class="fas fa-folder-open"></i> Browse</button>
+      </div>
+      <img class="tt-image-preview" data-tt-image-preview="imagePath" src="{{cfg.imagePath}}" {{#unless cfg.imagePath}}hidden{{/unless}} alt="Global custom bubble preview">
+    </div>
   </section>
-  <section><h2>Players</h2><p class="hint">Assign an actor and optionally the user's Discord ID. Add that actor's token to the current scene before testing.</p>
-    {{#each users}}<div class="tt-user">
-      <strong>{{name}} {{#if gm}}(GM){{/if}}</strong>
-      <label><input type="checkbox" name="enabled:{{id}}" {{#if enabled}}checked{{/if}}> Enabled</label>
-      <label>Actor <select name="actor:{{id}}">{{#each actors}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
-      <label>Discord ID <input type="text" name="discord:{{id}}" value="{{discordId}}"></label>
-      <button type="button" data-test-user="{{id}}" title="Show a test speech bubble">Test</button>
-    </div>{{/each}}
+  <section>
+    <h2>Players — Individual Bubbles</h2>
+    <p class="hint">Actor and Discord ID links remain unchanged after this update. Choose individual styles, colors, or PNG images below. Empty image means use the global setting.</p>
+    {{#each users}}
+      <div class="tt-user">
+        <strong>{{name}} {{#if gm}}(GM){{/if}}</strong>
+        <label><input type="checkbox" name="enabled:{{id}}" {{#if enabled}}checked{{/if}}> Enabled</label>
+        <label>Actor
+          <select name="actor:{{id}}">
+            {{#each actors}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}
+          </select>
+        </label>
+        <label>Discord ID <input type="text" name="discord:{{id}}" value="{{discordId}}"></label>
+        <button type="button" data-test-user="{{id}}" title="Preview this player's configured token bubble">Test</button>
+        <div class="tt-user-options">
+          <label>Personal Style
+            <select name="style:{{id}}">
+              {{#each personalStyles}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+            </select>
+          </label>
+          <label>Bubble Color
+            <input type="color" name="color:{{id}}" value="{{color}}" title="Player bubble color">
+          </label>
+          <label class="tt-user-art">Personal Bubble Image
+            <span class="tt-file-input">
+              <input type="text" data-tt-image-input name="image:{{id}}" value="{{imagePath}}" placeholder="Use global bubble">
+              <button type="button" data-tt-image-picker="image:{{id}}" title="Browse images"><i class="fas fa-folder-open"></i></button>
+            </span>
+          </label>
+          <img class="tt-image-preview tt-player-art-preview" data-tt-image-preview="image:{{id}}" src="{{imagePath}}" {{#unless imagePath}}hidden{{/unless}} alt="Custom player bubble preview">
+        </div>
+      </div>
+    {{/each}}
   </section>
-  <button type="submit"><i class="fas fa-save"></i> Save settings</button>
+  <button type="submit"><i class="fas fa-save"></i> Save Settings</button>
 </form>
