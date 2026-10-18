@@ -4,13 +4,36 @@
     <label>WebSocket URL <input name="bridgeUrl" value="{{cfg.bridgeUrl}}"></label>
     <p class="hint">Optional. Discord voice detection requires a separate bridge application; this module alone cannot detect Discord speech.</p>
   </section>
-  <section><h2>Bubble settings</h2><div class="tt-grid">
-    <label>Style <select name="style">{{#each styles}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{id}}</option>{{/each}}</select></label>
-    <label>Position <select name="position">{{#each positions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{id}}</option>{{/each}}</select></label>
-    <label>Scale <input name="scale" type="number" min="0.5" max="3" step="0.1" value="{{cfg.scale}}"></label>
-    <label>Bubble hold (ms) <input name="holdMs" type="number" min="300" max="10000" step="100" value="{{cfg.holdMs}}"></label>
-    <label><input type="checkbox" name="showForGM" {{#if cfg.showForGM}}checked{{/if}}> Show for GM</label>
-  </div></section>
+  <section class="tt-style-settings">
+    <h2>Bubble settings</h2>
+    <div class="tt-choose-label">Choose a bubble style</div>
+    <input type="hidden" name="style" value="{{cfg.style}}">
+    <div class="tt-bubble-choices" role="group" aria-label="Bubble appearance">
+      {{#each styles}}
+      <button type="button"
+              class="tt-bubble-choice {{#if selected}}is-selected{{/if}}"
+              data-tt-bubble-style="{{id}}"
+              aria-pressed="{{#if selected}}true{{else}}false{{/if}}"
+              title="{{label}} bubble"
+              aria-label="{{label}} bubble">
+        <span class="tt-bubble-thumbnail tt-style-{{id}}" aria-hidden="true">{{symbol}}</span>
+        <span class="tt-bubble-choice-label">{{label}}</span>
+      </button>
+      {{/each}}
+    </div>
+    <div class="tt-bubble-preview-line" aria-live="polite">
+      <span>Selected:</span>
+      <span class="tt-bubble-preview tt-style-{{cfg.style}}" data-tt-selected-preview aria-hidden="true">{{selectedSymbol}}</span>
+      <strong data-tt-selected-label>{{selectedStyle}}</strong>
+    </div>
+    <p class="hint">Click a bubble to preview it. Save settings to use it in Discord or on the scene.</p>
+    <div class="tt-grid">
+      <label>Position <select name="position">{{#each positions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{id}}</option>{{/each}}</select></label>
+      <label>Scale <input name="scale" type="number" min="0.5" max="3" step="0.1" value="{{cfg.scale}}"></label>
+      <label>Bubble hold (ms) <input name="holdMs" type="number" min="300" max="10000" step="100" value="{{cfg.holdMs}}"></label>
+      <label class="tt-show-gm"><input type="checkbox" name="showForGM" {{#if cfg.showForGM}}checked{{/if}}> Show for GM</label>
+    </div>
+  </section>
   <section><h2>Players</h2><p class="hint">Assign an actor and optionally the user's Discord ID. Add that actor's token to the current scene before testing.</p>
     {{#each users}}<div class="tt-user">
       <strong>{{name}} {{#if gm}}(GM){{/if}}</strong>
