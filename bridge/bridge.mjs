@@ -22,6 +22,10 @@ const guildId = process.env.DISCORD_GUILD_ID?.trim();
 const channelId = process.env.DISCORD_VOICE_CHANNEL_ID?.trim();
 const port = Number.parseInt(process.env.BRIDGE_PORT || "47944", 10);
 const host = "127.0.0.1";
+// Suppress brief speaking gaps, without introducing delay at the start.
+const releaseMs = Math.min(1800, Math.max(0,
+  Number.parseInt(process.env.VOICE_RELEASE_MS || "650", 10) || 0
+));
 
 if (!token || !guildId || !channelId) {
   console.error("[Bridge] Missing DISCORD_BOT_TOKEN, DISCORD_GUILD_ID or DISCORD_VOICE_CHANNEL_ID in .env.");
@@ -39,6 +43,7 @@ const server = new WebSocketServer({
 });
 const clients = new Set();
 const speaking = new Set();
+const releaseTimers = new Map();
 let connection = null;
 let reconnectTimer = null;
 let connecting = false;
@@ -57,9 +62,32 @@ function sendToAll(message) {
     }
   }
 }
+function statusEvent() {
+  return JSON.stringify({
+    type: "bridge-status",
+    discordReady: discord.isReady(),
+    voiceReady: connection?.state?.status === VoiceConnectionStatus.Ready
+  });
+}
+function sendStatus() {
+  sendToAll(statusEvent());
+}
+function clearReleaseTimer(id) {
+  const timer = releaseTimers.get(id);
+  if (timer) clearTimeout(timer);
+  releaseTimers.delete(id);
+}
+function scheduleSpeakingEnd(id) {
+  clearReleaseTimer(id);
+  releaseTimers.set(id, setTimeout(() => {
+    releaseTimers.delete(id);
+    markSpeaking(id, false);
+  }, releaseMs));
+}
 function markSpeaking(discordId, isSpeaking) {
   // Do not forward bots or our own identity as "players".
   if (discordId === discord.user?.id) return;
+  if (isSpeaking) clearReleaseTimer(discordId);
   const wasSpeaking = speaking.has(discordId);
   if (isSpeaking && !wasSpeaking) {
     speaking.add(discordId);
@@ -72,6 +100,7 @@ function markSpeaking(discordId, isSpeaking) {
   }
 }
 function clearSpeakers() {
+  for (const id of [...releaseTimers.keys()]) clearReleaseTimer(id);
   for (const id of [...speaking]) markSpeaking(id, false);
 }
 
@@ -84,6 +113,8 @@ server.on("connection", (socket, request) => {
   }
   clients.add(socket);
   console.log("[Bridge] Foundry connected. Clients:", clients.size);
+  // Report bridge + voice status immediately upon connection.
+  socket.send(statusEvent());
   // Restore current speaking state if the GM reloads Foundry.
   for (const id of speaking) socket.send(event(id, true));
   socket.on("close", () => {
@@ -130,6 +161,7 @@ function disposeConnection() {
   if (!connection) return;
   const old = connection;
   connection = null;
+  sendStatus();
   old.removeAllListeners("stateChange");
   old.removeAllListeners("error");
   try {
@@ -157,6 +189,7 @@ async function connectVoice() {
       selfMute: true,    // The bot never speaks.
     });
     connection = voice;
+    sendStatus();
     voice.on("error", error => {
       console.warn("[Voice] Connection error:", error.message);
       scheduleReconnect("Voice connection error");
@@ -164,6 +197,7 @@ async function connectVoice() {
     voice.on("stateChange", (_old, next) => {
       if (voice !== connection) return;
       console.log("[Voice] State:", next.status);
+      sendStatus();
       if (next.status === VoiceConnectionStatus.Disconnected || next.status === VoiceConnectionStatus.Destroyed) {
         clearSpeakers();
         scheduleReconnect("Voice disconnected");
@@ -173,7 +207,7 @@ async function connectVoice() {
     await entersState(voice, VoiceConnectionStatus.Ready, 20000);
     // Receives speaking indicator events only: never subscribe() to audio.
     voice.receiver.speaking.on("start", id => markSpeaking(id, true));
-    voice.receiver.speaking.on("end", id => markSpeaking(id, false));
+    voice.receiver.speaking.on("end", id => scheduleSpeakingEnd(id));
     console.log("[Voice] Ready. Talk in this channel to display token bubbles.");
   } catch (error) {
     console.error("[Voice] Could not join:", error.message);
@@ -190,6 +224,7 @@ discord.once(Events.ClientReady, client => {
 discord.on(Events.VoiceStateUpdate, (oldState, newState) => {
   if (oldState.channelId === channelId &&
       (newState.channelId !== channelId || newState.selfMute || newState.serverMute)) {
+    clearReleaseTimer(oldState.id);
     markSpeaking(oldState.id, false);
   }
   if (oldState.id === discord.user?.id && oldState.channelId === channelId &&
@@ -200,6 +235,7 @@ discord.on(Events.VoiceStateUpdate, (oldState, newState) => {
 discord.on("error", error => console.error("[Discord] Client error:", error.message));
 discord.on("shardDisconnect", () => {
   clearSpeakers();
+  sendStatus();
   scheduleReconnect("Discord gateway disconnected");
 });
 
