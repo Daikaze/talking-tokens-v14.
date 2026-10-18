@@ -168,6 +168,8 @@ class Tokens{
   static bridge=null;
   static retry=null;
   static frame=0;
+  static bridgeStatus="disabled";
+  static bridgeVoiceReady=false;
   static config(){return game.settings.get(ID,"config");}
   static open(){if(!game.user.isGM)return;new Settings().render({force:true});}
   static relay(userId,speaking){
@@ -196,9 +198,14 @@ class Tokens{
     return tokens.find(t=>matches(t) && t.visible!==false)
       || tokens.find(matches) || null;
   }
-  static show(id,token,holdMs,styleOverride="") {
+  static show(id,token,holdMs,overrides={}) {
     const cfg=this.config();
-    const style=Object.hasOwn(STYLES,styleOverride)?styleOverride:cfg.style;
+    const userCfg=cfg.mappings?.[id]||{};
+    const selected=overrides.style||userCfg.style||"inherit";
+    const style=Object.hasOwn(STYLES,selected)?selected:cfg.style;
+    const color=bubbleColor(overrides.color||userCfg.color);
+    const customImage=imagePath(overrides.imagePath||userCfg.imagePath||cfg.imagePath);
+    const animation=ANIMATIONS.includes(cfg.animation)?cfg.animation:"pulse";
     let old=this.elements.get(id);
     if(old && old.token!==token){this.hide(id);old=null;}
     if(!old){
@@ -208,9 +215,19 @@ class Tokens{
       old={el,token,timer:null};
       this.elements.set(id,old);
     }
-    old.el.className="tt-speaking tt-style-"+style;
-    old.el.textContent=STYLES[style]||STYLES.speech;
+    old.el.className="tt-speaking tt-style-"+style+" tt-anim-"+animation+(customImage?" tt-custom-image":"");
+    old.el.style.setProperty("--tt-bubble-color",color);
     old.el.style.setProperty("--tt-scale",String(cfg.scale));
+    if(customImage){
+      const img=document.createElement("img");
+      img.className="tt-bubble-art";
+      img.src=customImage;
+      img.alt="";
+      img.draggable=false;
+      old.el.replaceChildren(img);
+    } else {
+      old.el.textContent=STYLES[style]||STYLES.speech;
+    }
     clearTimeout(old.timer);
     old.timer=setTimeout(()=>this.hide(id),holdMs??cfg.holdMs??2200);
     this.draw();
@@ -232,7 +249,10 @@ class Tokens{
   static hide(id){
     const it=this.elements.get(id);
     if(!it)return;
-    clearTimeout(it.timer);it.el.remove();this.elements.delete(id);
+    clearTimeout(it.timer);
+    it.el.classList.add("tt-exit");
+    setTimeout(()=>it.el.remove(),180);
+    this.elements.delete(id);
     if(!this.elements.size&&this.frame){cancelAnimationFrame(this.frame);this.frame=0;}
   }
   static clear(){for(const id of [...this.elements.keys()])this.hide(id);}
@@ -274,7 +294,7 @@ class Tokens{
     }
     return true;
   }
-  static test(userId,actorId="",style=""){
+  static test(userId,actorId="",style="",color="",image=""){
     if(!game.user.isGM)return;
     const user=game.users.get(userId);
     const resolved=actorId || this.config().mappings?.[userId]?.actorId || user?.character?.id;
@@ -293,31 +313,59 @@ class Tokens{
     }
     // Test uses the actor currently selected in the form, even before Save.
     // This is a LOCAL preview; real speaker events are synchronized via sockets.
-    this.show(userId,token,2200,style);
+    this.show(userId,token,2200,{style,color,imagePath:image});
     if(this.draw())ui.notifications.info("Talking Tokens: Test bubble displayed for "+(user?.name||"player")+".");
     else ui.notifications.error("Talking Tokens: Could not locate the canvas element. See F12 console.");
+  }
+  static setStatus(status){
+    this.bridgeStatus=status;
+    document.querySelectorAll("[data-tt-bridge-status]").forEach(el=>{
+      const labels={
+        disabled:"Bridge disabled",connecting:"Connecting…",
+        connected:"Bridge connected — voice status unknown",
+        ready:"Discord voice connected",error:"Bridge disconnected / retrying"
+      };
+      el.dataset.status=status;
+      el.textContent=labels[status]||labels.error;
+    });
   }
   static restartBridge(){
     if(!game.user.isGM)return;
     clearTimeout(this.retry);this.retry=null;
     if(this.bridge){this.bridge.onclose=null;this.bridge.close();this.bridge=null;}
     const cfg=this.config();
-    if(!cfg.bridgeEnabled)return;
+    if(!cfg.bridgeEnabled){this.setStatus("disabled");return;}
+    this.setStatus("connecting");
     if(!/^wss?:\/\//i.test(cfg.bridgeUrl)){
+      this.setStatus("error");
       ui.notifications.warn("Bridge URL must begin with ws:// or wss://");
       return;
     }
     try{
       const ws=new WebSocket(cfg.bridgeUrl);this.bridge=ws;
-      ws.onopen=()=>console.info(ID,"Bridge connected");
-      ws.onmessage=e=>{try{this.fromBridge(JSON.parse(e.data));}catch(err){console.warn(ID,"Invalid bridge message",err);}};
-      ws.onerror=()=>console.warn(ID,"Bridge connection failed");
+      ws.onopen=()=>{
+        this.setStatus("connected");
+        console.info(ID,"Bridge connected");
+      };
+      ws.onmessage=e=>{
+        try{
+          const data=JSON.parse(e.data);
+          if(data?.type==="bridge-status"){
+            this.setStatus(data.voiceReady?"ready":"connected");
+          }else this.fromBridge(data);
+        }catch(err){console.warn(ID,"Invalid bridge message",err);}
+      };
+      ws.onerror=()=>{
+        this.setStatus("error");
+        console.warn(ID,"Bridge connection failed");
+      };
       ws.onclose=()=>{
         if(this.bridge!==ws)return;
         this.bridge=null;
+        this.setStatus("error");
         this.retry=setTimeout(()=>this.restartBridge(),5000);
       };
-    }catch(err){console.error(ID,err);}
+    }catch(err){this.setStatus("error");console.error(ID,err);}
   }
 }
 
