@@ -1,15 +1,29 @@
 const ID="talking-tokens-v14";
 const CH="module."+ID;
-const DEFAULT={bridgeEnabled:false,bridgeUrl:"ws://127.0.0.1:47944",style:"speech",position:"above",scale:1,holdMs:2200,showForGM:false,mappings:{}};
+const DEFAULT={
+  bridgeEnabled:false,bridgeUrl:"ws://127.0.0.1:47944",
+  style:"speech",position:"above",scale:1,holdMs:2200,showForGM:false,
+  imagePath:"",animation:"pulse",mappings:{}
+};
 const STYLES={speech:"● ● ●",chat:"•••",thought:"•••",shout:"!",whisper:"…",emote:"✦"};
 const STYLE_LABELS={speech:"Classic",chat:"Chat",thought:"Thought",shout:"Shout",whisper:"Whisper",emote:"Magic"};
 const POSITIONS=["above","topLeft","topRight","left","right","below"];
+const ANIMATIONS=["pulse","float","bounce","glow","none"];
+const COLOR=/^#[0-9a-f]{6}$/i;
+function imagePath(value) {
+  const path=String(value||"").trim();
+  if(!path || /^(javascript:|data:)/i.test(path) || /["'<>\\\n\r]/.test(path))return "";
+  return path;
+}
+function bubbleColor(value) {
+  return COLOR.test(value||"") ? value : "#ffffff";
+}
 
 class Settings extends foundry.applications.api.HandlebarsApplicationMixin(foundry.applications.api.ApplicationV2) {
   static DEFAULT_OPTIONS={
     id:"talking-tokens-v14-settings",
     window:{title:"Talking Tokens V14",icon:"fa-solid fa-comments",resizable:true},
-    position:{width:740},
+    position:{width:790},
     classes:["tt-settings-window"]
   };
   static PARTS={main:{template:"modules/talking-tokens-v14/templates/settings.hbs"}};
@@ -18,13 +32,21 @@ class Settings extends foundry.applications.api.HandlebarsApplicationMixin(found
     const cfg=game.settings.get(ID,"config"),mappings=cfg.mappings||{};
     const actors=game.actors.contents.slice().sort((a,b)=>a.name.localeCompare(b.name));
     return {...data,cfg,
+      bridgeStatus:Tokens.bridgeStatus,
+      animations:ANIMATIONS.map(id=>({id,selected:id===(cfg.animation||"pulse")})),
       styles:Object.keys(STYLES).map(id=>({id,label:STYLE_LABELS[id],symbol:STYLES[id],selected:id===cfg.style})),
       selectedStyle:STYLE_LABELS[cfg.style]||"Classic",
       selectedSymbol:STYLES[cfg.style]||STYLES.speech,
       positions:POSITIONS.map(id=>({id,selected:id===cfg.position})),
       users:game.users.contents.map(u=>{
         const m=mappings[u.id]||{},actorId=m.actorId??u.character?.id??"";
-        return {id:u.id,name:u.name,gm:u.isGM,enabled:m.enabled??!u.isGM,discordId:m.discordId||"",
+        return {
+          id:u.id,name:u.name,gm:u.isGM,enabled:m.enabled??!u.isGM,discordId:m.discordId||"",
+          color:bubbleColor(m.color),imagePath:imagePath(m.imagePath),
+          personalStyles:[
+            {id:"inherit",label:"Use global style",selected:!m.style||m.style==="inherit"},
+            ...Object.keys(STYLES).map(id=>({id,label:STYLE_LABELS[id],selected:m.style===id}))
+          ],
           actors:[{id:"",name:"— Not linked —",selected:!actorId},
             ...actors.map(a=>({id:a.id,name:a.name,selected:a.id===actorId}))]};
       })
@@ -61,8 +83,15 @@ class Settings extends foundry.applications.api.HandlebarsApplicationMixin(found
       if(!game.user.isGM)return;
       const f=new FormData(form),old=game.settings.get(ID,"config"),mappings={};
       for(const u of game.users.contents){
-        mappings[u.id]={enabled:f.has("enabled:"+u.id),actorId:String(f.get("actor:"+u.id)||""),
-          discordId:String(f.get("discord:"+u.id)||"").trim()};
+        const personalStyle=String(f.get("style:"+u.id)||"inherit");
+        mappings[u.id]={
+          enabled:f.has("enabled:"+u.id),
+          actorId:String(f.get("actor:"+u.id)||""),
+          discordId:String(f.get("discord:"+u.id)||"").trim(),
+          style:STYLES[personalStyle] ? personalStyle : "inherit",
+          color:bubbleColor(f.get("color:"+u.id)),
+          imagePath:imagePath(f.get("image:"+u.id))
+        };
       }
       const value={
         ...old,bridgeEnabled:f.has("bridgeEnabled"),
@@ -71,18 +100,66 @@ class Settings extends foundry.applications.api.HandlebarsApplicationMixin(found
         position:POSITIONS.includes(f.get("position"))?f.get("position"):"above",
         scale:Math.max(.5,Math.min(3,Number(f.get("scale"))||1)),
         holdMs:Math.max(300,Math.min(10000,Number(f.get("holdMs"))||2200)),
-        showForGM:f.has("showForGM"),mappings
+        showForGM:f.has("showForGM"),
+        imagePath:imagePath(f.get("imagePath")),
+        animation:ANIMATIONS.includes(f.get("animation"))?f.get("animation"):"pulse",
+        mappings
       };
       await game.settings.set(ID,"config",value);
       Tokens.restartBridge();
       ui.notifications.info("Talking Tokens settings saved.");
       this.close();
     });
+    // Choose a Foundry asset without uploading it into this repository.
+    const Picker=foundry.applications.apps.FilePicker.implementation;
+    form.querySelectorAll("[data-tt-image-picker]").forEach(button=>button.addEventListener("click",()=>{
+      const name=button.dataset.ttImagePicker;
+      const input=[...form.querySelectorAll("input")].find(el=>el.name===name);
+      if(!input)return;
+      new Picker({
+        type:"image",current:input.value,
+        callback:chosen=>{
+          input.value=chosen;
+          input.dispatchEvent(new Event("input",{bubbles:true}));
+        }
+      }).render({force:true});
+    }));
+    form.querySelectorAll("input[data-tt-image-input]").forEach(input=>{
+      const preview=form.querySelector('[data-tt-image-preview="'+CSS.escape(input.name)+'"]');
+      const update=()=>{
+        if(!preview)return;
+        const p=imagePath(input.value);
+        preview.hidden=!p;
+        if(p)preview.src=p;else preview.removeAttribute("src");
+      };
+      input.addEventListener("input",update);
+      update();
+    });
+    this.updateBridgeIndicator();
     form.querySelectorAll("[data-test-user]").forEach(button=>button.addEventListener("click",()=>{
       const row=button.closest(".tt-user");
       const actorId=row?.querySelector("select[name^='actor:']")?.value || "";
-      Tokens.test(button.dataset.testUser,actorId,styleInput?.value||"");
+      const id=button.dataset.testUser;
+      const style=form.querySelector('[name="style:'+CSS.escape(id)+'"]')?.value||"inherit";
+      const color=form.querySelector('[name="color:'+CSS.escape(id)+'"]')?.value||"#ffffff";
+      const userImage=form.querySelector('[name="image:'+CSS.escape(id)+'"]')?.value||"";
+      const globalImage=form.querySelector('[name="imagePath"]')?.value||"";
+      Tokens.test(id,actorId,style==="inherit"?styleInput?.value||"":style,color,userImage||globalImage);
     }));
+  }
+  updateBridgeIndicator(){
+    const badge=this.element?.querySelector("[data-tt-bridge-status]");
+    if(!badge)return;
+    const status=Tokens.bridgeStatus;
+    const labels={
+      disabled:"Bridge disabled",
+      connecting:"Connecting…",
+      connected:"Bridge connected — voice status unknown",
+      ready:"Discord voice connected",
+      error:"Bridge disconnected / retrying"
+    };
+    badge.dataset.status=status;
+    badge.textContent=labels[status]||labels.error;
   }
 }
 
