@@ -1,0 +1,24 @@
+<form class="tt-form">
+  <section><h2>Bridge connection</h2>
+    <label><input type="checkbox" name="bridgeEnabled" {{#if cfg.bridgeEnabled}}checked{{/if}}> Connect to external voice bridge</label>
+    <label>WebSocket URL <input name="bridgeUrl" value="{{cfg.bridgeUrl}}"></label>
+    <p class="hint">Optional. Discord voice detection requires a separate bridge application; this module alone cannot detect Discord speech.</p>
+  </section>
+  <section><h2>Bubble settings</h2><div class="tt-grid">
+    <label>Style <select name="style">{{#each styles}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{id}}</option>{{/each}}</select></label>
+    <label>Position <select name="position">{{#each positions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{id}}</option>{{/each}}</select></label>
+    <label>Scale <input name="scale" type="number" min="0.5" max="3" step="0.1" value="{{cfg.scale}}"></label>
+    <label>Bubble hold (ms) <input name="holdMs" type="number" min="300" max="10000" step="100" value="{{cfg.holdMs}}"></label>
+    <label><input type="checkbox" name="showForGM" {{#if cfg.showForGM}}checked{{/if}}> Show for GM</label>
+  </div></section>
+  <section><h2>Players</h2><p class="hint">Assign an actor and optionally the user's Discord ID. Add that actor's token to the current scene before testing.</p>
+    {{#each users}}<div class="tt-user">
+      <strong>{{name}} {{#if gm}}(GM){{/if}}</strong>
+      <label><input type="checkbox" name="enabled:{{id}}" {{#if enabled}}checked{{/if}}> Enabled</label>
+      <label>Actor <select name="actor:{{id}}">{{#each actors}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
+      <label>Discord ID <input type="text" name="discord:{{id}}" value="{{discordId}}"></label>
+      <button type="button" data-test-user="{{id}}" title="Show a test speech bubble">Test</button>
+    </div>{{/each}}
+  </section>
+  <button type="submit"><i class="fas fa-save"></i> Save settings</button>
+</form>
