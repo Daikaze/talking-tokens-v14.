@@ -53,7 +53,11 @@ class Settings extends foundry.applications.api.HandlebarsApplicationMixin(found
       ui.notifications.info("Talking Tokens settings saved.");
       this.close();
     });
-    form.querySelectorAll("[data-test-user]").forEach(button=>button.addEventListener("click",()=>Tokens.test(button.dataset.testUser)));
+    form.querySelectorAll("[data-test-user]").forEach(button=>button.addEventListener("click",()=>{
+      const row=button.closest(".tt-user");
+      const actorId=row?.querySelector("select[name^='actor:']")?.value || "";
+      Tokens.test(button.dataset.testUser,actorId);
+    }));
   }
 }
 
@@ -82,6 +86,33 @@ class Tokens{
     }
     if(id)this.relay(id,message.speaking);
   }
+  static findToken(actorId) {
+    if(!canvas?.ready || !actorId) return null;
+    // TokenDocument.actorId remains tied to the world Actor, including unlinked tokens.
+    const tokens=canvas.tokens?.placeables || [];
+    const matches=t=>t.document?.actorId===actorId || t.actor?.id===actorId;
+    return tokens.find(t=>matches(t) && t.visible!==false)
+      || tokens.find(matches) || null;
+  }
+  static show(id,token,holdMs) {
+    const cfg=this.config();
+    let old=this.elements.get(id);
+    if(old && old.token!==token){this.hide(id);old=null;}
+    if(!old){
+      const el=document.createElement("div");
+      el.setAttribute("aria-hidden","true");
+      document.body.append(el);
+      old={el,token,timer:null};
+      this.elements.set(id,old);
+    }
+    old.el.className="tt-speaking tt-style-"+cfg.style;
+    old.el.textContent=STYLES[cfg.style]||STYLES.speech;
+    old.el.style.setProperty("--tt-scale",String(cfg.scale));
+    clearTimeout(old.timer);
+    old.timer=setTimeout(()=>this.hide(id),holdMs??cfg.holdMs??2200);
+    this.draw();
+    if(!this.frame)this.loop();
+  }
   static handle(p){
     if(p?.type!=="speaking")return;
     const cfg=this.config(),u=game.users.get(p.userId);
@@ -91,25 +122,9 @@ class Tokens{
       this.hide(u.id);return;
     }
     const actorId=m.actorId||u.character?.id;
-    if(!canvas?.ready||!actorId)return;
-    const token=canvas.tokens.placeables.find(t=>t.actor?.id===actorId&&t.visible);
-    if(!token)return;
-    let old=this.elements.get(u.id);
-    if(old&&old.token!==token){this.hide(u.id);old=null;}
-    if(!old){
-      const el=document.createElement("div");
-      el.setAttribute("aria-hidden","true");
-      document.body.append(el);
-      old={el,token,timer:null};
-      this.elements.set(u.id,old);
-    }
-    old.el.className="tt-speaking tt-style-"+cfg.style;
-    old.el.textContent=STYLES[cfg.style]||STYLES.speech;
-    old.el.style.setProperty("--tt-scale",String(cfg.scale));
-    clearTimeout(old.timer);
-    old.timer=setTimeout(()=>this.hide(u.id),cfg.holdMs||2200);
-    this.draw();
-    if(!this.frame)this.loop();
+    const token=this.findToken(actorId);
+    if(token)this.show(u.id,token);
+    else console.debug(ID,"No token in current scene for user",u.name,"actor",actorId);
   }
   static hide(id){
     const it=this.elements.get(id);
@@ -124,31 +139,60 @@ class Tokens{
     this.frame=requestAnimationFrame(()=>this.loop());
   }
   static draw(){
-    if(!canvas?.ready||!canvas.app?.renderer)return;
-    const rect=canvas.app.renderer.canvas?.getBoundingClientRect?.();
-    if(!rect)return;
-    const size=canvas.app.renderer.screen;
-    const sx=rect.width/(size.width||rect.width),sy=rect.height/(size.height||rect.height);
+    if(!canvas?.ready) return false;
+    // V14 can expose the canvas on app.canvas rather than renderer.canvas.
+    const board=canvas.app?.canvas || canvas.app?.view
+      || canvas.app?.renderer?.canvas || document.querySelector("canvas#board");
+    const rect=board?.getBoundingClientRect?.();
+    if(!rect || !rect.width || !rect.height) return false;
+    const screen=canvas.app?.renderer?.screen;
+    const sx=rect.width/(screen?.width || board.width || rect.width);
+    const sy=rect.height/(screen?.height || board.height || rect.height);
     const pos=this.config().position;
-    for(const [id,it] of this.elements){
-      const t=it.token;
-      if(!t||t.destroyed||!canvas.tokens.placeables.includes(t)){this.hide(id);continue;}
-      const x=t.document.x,y=t.document.y,w=t.w,h=t.h;
-      let px=x+w/2,py=y,anchor="above";
-      if(pos==="topLeft"){px=x;}else if(pos==="topRight"){px=x+w;}
-      else if(pos==="left"){px=x;py=y+h/2;anchor="left";}
-      else if(pos==="right"){px=x+w;py=y+h/2;anchor="right";}
-      else if(pos==="below"){py=y+h;anchor="below";}
-      const p=canvas.stage.toGlobal(new PIXI.Point(px,py));
-      it.el.style.left=(rect.left+p.x*sx)+"px";
-      it.el.style.top=(rect.top+p.y*sy)+"px";
-      it.el.dataset.anchor=anchor;
+    try{
+      for(const [id,it] of this.elements){
+        const t=it.token;
+        if(!t||t.destroyed||!canvas.tokens.placeables.includes(t)){this.hide(id);continue;}
+        // Token position in scene pixels; canvas.stage performs world-to-screen conversion.
+        const x=t.document.x,y=t.document.y,w=t.w,h=t.h;
+        let px=x+w/2,py=y,anchor="above";
+        if(pos==="topLeft"){px=x;}else if(pos==="topRight"){px=x+w;}
+        else if(pos==="left"){px=x;py=y+h/2;anchor="left";}
+        else if(pos==="right"){px=x+w;py=y+h/2;anchor="right";}
+        else if(pos==="below"){py=y+h;anchor="below";}
+        const p=canvas.stage.toGlobal({x:px,y:py});
+        it.el.style.left=(rect.left+p.x*sx)+"px";
+        it.el.style.top=(rect.top+p.y*sy)+"px";
+        it.el.dataset.anchor=anchor;
+      }
+    }catch(error){
+      console.error(ID,"Could not position speaking bubbles",error);
+      return false;
     }
+    return true;
   }
-  static test(userId){
+  static test(userId,actorId=""){
     if(!game.user.isGM)return;
-    this.relay(userId,true);
-    setTimeout(()=>this.relay(userId,false),1500);
+    const user=game.users.get(userId);
+    const resolved=actorId || this.config().mappings?.[userId]?.actorId || user?.character?.id;
+    if(!canvas?.ready){
+      ui.notifications.warn("Talking Tokens: Open a scene with the canvas loaded first.");
+      return;
+    }
+    if(!resolved){
+      ui.notifications.warn("Talking Tokens: Select an actor for "+(user?.name||"this user")+".");
+      return;
+    }
+    const token=this.findToken(resolved);
+    if(!token){
+      ui.notifications.warn("Talking Tokens: No token found on this scene for "+(user?.name||"this user")+". Place that actor's token on the scene.");
+      return;
+    }
+    // Test uses the actor currently selected in the form, even before Save.
+    // This is a LOCAL preview; real speaker events are synchronized via sockets.
+    this.show(userId,token,2200);
+    if(this.draw())ui.notifications.info("Talking Tokens: Test bubble displayed for "+(user?.name||"player")+".");
+    else ui.notifications.error("Talking Tokens: Could not locate the canvas element. See F12 console.");
   }
   static restartBridge(){
     if(!game.user.isGM)return;
