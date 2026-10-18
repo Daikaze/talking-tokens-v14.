@@ -28,6 +28,7 @@ jobs:
         run: |
           node --version
           node --check bridge/bridge.mjs
+          node --check scripts/main.js
       - name: Build both release downloads
         shell: bash
         run: |
