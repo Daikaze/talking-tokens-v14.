@@ -1,0 +1,57 @@
+name: Publish Foundry module
+on:
+  push:
+    branches: [main]
+    paths:
+      - module.json
+      - scripts/**
+      - templates/**
+      - styles/**
+      - .github/workflows/release.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: foundry-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build versioned release
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, shutil, zipfile
+          base = pathlib.Path(".")
+          out = pathlib.Path("dist")
+          out.mkdir(exist_ok=True)
+          manifest = json.loads((base/"module.json").read_text())
+          version = "0.1." + os.environ["GITHUB_RUN_NUMBER"]
+          repo = "https://github.com/Daikaze/talking-tokens-v14."
+          manifest["version"] = version
+          manifest["manifest"] = repo + "/releases/latest/download/module.json"
+          manifest["download"] = repo + "/releases/download/v" + version + "/module.zip"
+          (out/"module.json").write_text(json.dumps(manifest,indent=2)+"\n")
+          with zipfile.ZipFile(out/"module.zip","w",compression=zipfile.ZIP_DEFLATED) as archive:
+              archive.writestr("module.json",json.dumps(manifest,indent=2)+"\n")
+              for root in ("scripts","styles","templates"):
+                  for f in sorted((base/root).rglob("*")):
+                      if f.is_file():
+                          archive.write(f,f.as_posix())
+          print("Packaged Foundry module", version)
+          PY
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(python3 -c 'import json;print(json.load(open("dist/module.json"))["version"])')
+          gh release create "v$VERSION" dist/module.json dist/module.zip \
+            --title "Talking Tokens v$VERSION (Beta)" \
+            --notes "Foundry V14 beta. Discord voice bridge is not yet included; test using the GM settings window." \
+            --prerelease \
+            --latest
