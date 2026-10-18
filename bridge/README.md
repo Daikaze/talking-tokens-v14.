@@ -28,6 +28,7 @@ This folder is a **separate program** from the Foundry module. It runs on the GM
    DISCORD_GUILD_ID=your_server_id
    DISCORD_VOICE_CHANNEL_ID=your_voice_channel_id
    BRIDGE_PORT=47944
+   VOICE_RELEASE_MS=650
    ```
 4. Save, double-click `start-windows.bat` again. It installs npm dependencies on first run.
 5. Leave the black console window open during your game. Look for:
@@ -64,3 +65,11 @@ This folder is a **separate program** from the Foundry module. It runs on the GM
 - Do not share `.env`, the token, or give the bot more server permissions than needed.
 - Browser-to-localhost WebSocket access has inherent cross-origin concerns. Only run the bridge on a trusted PC/browser, and close it after the session.
 - If you suspect token leakage, regenerate it in the Discord Developer Portal.
+
+
+## Talking Tokens v0.2.0 details
+
+- **Smoother voice activity:** After Discord reports speaking stopped, the helper waits `VOICE_RELEASE_MS` milliseconds (default 650 ms) before sending the final OFF event. If the person resumes during that gap the pending stop is cancelled.
+- **Better status reporting:** The helper sends `{"type":"bridge-status","discordReady":true,"voiceReady":true}` once Discord voice connection is ready. Foundry v0.2.0 displays this in green.
+- **Privacy:** Only Discord user IDs and speaking status are sent to the local Foundry browser; no audio samples are stored, decoded, or forwarded.
+- **Updating:** Close the old bridge using Ctrl+C. Extract the new `discord-bridge.zip` over the existing helper folder, preserving your private `.env` file. Start the helper again. You may optionally add `VOICE_RELEASE_MS=650` to your existing `.env`.
