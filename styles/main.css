@@ -164,3 +164,92 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+
+/* Talking Tokens v0.2: Discord connection, player customization and bubble animations. */
+.tt-bridge-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:10px; margin-bottom:10px;
+}
+.tt-bridge-badge {
+  display:inline-flex; align-items:center; gap:7px; padding:5px 11px;
+  border-radius:18px; border:1px solid #888;
+  color:#f6f6f6; background:#5b6065; font:700 12px/1.5 Arial,sans-serif;
+  white-space:nowrap;
+}
+.tt-bridge-badge::before {
+  content:""; display:inline-block; width:9px; height:9px;
+  border-radius:50%; background:#d1d5db;
+}
+.tt-bridge-badge[data-status="ready"] {background:#25683b;color:white;border-color:#174e2b;}
+.tt-bridge-badge[data-status="ready"]::before {background:#a9fbb4;}
+.tt-bridge-badge[data-status="connected"] {background:#8d681e;color:white;border-color:#725314;}
+.tt-bridge-badge[data-status="connected"]::before {background:#ffe89b;}
+.tt-bridge-badge[data-status="connecting"] {background:#2d5983;border-color:#204461;}
+.tt-bridge-badge[data-status="connecting"]::before {background:#97d3ff;}
+.tt-bridge-badge[data-status="error"] {background:#923837;border-color:#6f2928;}
+.tt-bridge-badge[data-status="error"]::before {background:#ffaaa5;}
+.tt-file-input {display:flex;align-items:stretch;gap:6px;min-width:0;}
+.tt-file-input>input {flex:1;min-width:0;}
+.tt-file-input>button {flex:0 0 auto;min-width:44px;width:auto;margin:0;padding:5px 10px;}
+.tt-art-global {margin-top:12px;padding:10px 0;border-top:1px solid #8887;}
+.tt-art-global h3 {margin:0 0 6px;font-size:1rem;}
+.tt-form .tt-image-preview {display:block;max-width:100px;max-height:65px;object-fit:contain;margin-top:7px;border:1px solid #9999;border-radius:6px;background:#dedede;}
+.tt-form .tt-image-preview[hidden] {display:none !important;}
+.tt-form .tt-user {grid-template-columns:1.15fr .7fr 1.5fr 1.15fr 60px;align-items:center;}
+.tt-form .tt-user-options {
+  grid-column:1 / -1; display:grid;
+  grid-template-columns:1.4fr .65fr 2.3fr 75px;
+  gap:10px; align-items:end; width:100%;padding-top:8px;
+  border-top:1px dashed #8888;
+}
+.tt-user-options .tt-user-art {min-width:0;}
+.tt-form .tt-user-options label {min-width:0;}
+.tt-form .tt-user-options input[type="color"] {
+  width:100%;height:30px;padding:1px;cursor:pointer;
+}
+.tt-form .tt-user-options .tt-file-input>button {padding:4px 9px;}
+.tt-form .tt-user-options .tt-player-art-preview {max-height:38px;max-width:70px;margin:0 auto;}
+.tt-speaking {
+  background:var(--tt-bubble-color, #ffffff);
+  transition:opacity 180ms ease-out;
+  will-change:filter, opacity, translate;
+}
+.tt-speaking.tt-style-shout {background:var(--tt-bubble-color, #fff5a3);}
+.tt-speaking.tt-style-emote {background:var(--tt-bubble-color, #eadcff);}
+.tt-speaking.tt-exit {opacity:0;animation:none !important;}
+.tt-speaking.tt-anim-none {animation:none;}
+.tt-speaking.tt-anim-float {animation:tt-anim-float 1.3s ease-in-out infinite alternate;}
+.tt-speaking.tt-anim-bounce {animation:tt-anim-bounce .65s ease-in-out infinite alternate;}
+.tt-speaking.tt-anim-glow {animation:tt-anim-glow 1.5s ease-in-out infinite alternate;}
+.tt-speaking.tt-anim-pulse {animation:tt-pulse .7s ease-in-out infinite alternate;}
+.tt-speaking.tt-custom-image {
+  border:0;background:transparent !important;box-shadow:none;
+  min-width:60px;width:80px;height:60px;max-width:none;
+  border-radius:0 !important;padding:0;overflow:visible;
+  clip-path:none !important;
+}
+.tt-speaking.tt-custom-image::after {display:none !important;}
+.tt-speaking .tt-bubble-art {
+  display:block;width:100%;height:100%;object-fit:contain;
+  image-rendering:auto;pointer-events:none;
+  filter:drop-shadow(0 2px 2px #0008);
+}
+@keyframes tt-anim-float {
+  from {translate:0 1px;} to {translate:0 -7px;}
+}
+@keyframes tt-anim-bounce {
+  from {translate:0 1px;} to {translate:0 -6px;}
+}
+@keyframes tt-anim-glow {
+  from {filter:drop-shadow(0 0 1px rgba(245,195,65,.2));}
+  to {filter:drop-shadow(0 0 12px rgba(245,195,65,.9));}
+}
+@media (prefers-reduced-motion:reduce) {
+  .tt-speaking {animation:none !important;transition:none !important;}
+}
+@media (max-width:760px) {
+  .tt-form .tt-user-options {grid-template-columns:repeat(2,minmax(0,1fr));}
+  .tt-form .tt-user {grid-template-columns:1fr 1fr;gap:10px;}
+  .tt-form .tt-user-options {grid-column:1/-1;}
+}
