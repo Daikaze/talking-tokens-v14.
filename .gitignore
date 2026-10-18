@@ -1,0 +1,13 @@
+# Private credentials — NEVER push these files
+.env
+.env.*
+!.env.example
+bridge/.env
+bridge/.env.*
+!bridge/.env.example
+
+# Node dependencies / build outputs
+node_modules/
+bridge/node_modules/
+dist/
+*.log
