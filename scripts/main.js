@@ -1,7 +1,8 @@
 const ID="talking-tokens-v14";
 const CH="module."+ID;
 const DEFAULT={bridgeEnabled:false,bridgeUrl:"ws://127.0.0.1:47944",style:"speech",position:"above",scale:1,holdMs:2200,showForGM:false,mappings:{}};
-const STYLES={speech:"● ● ●",thought:"•••",shout:"!",whisper:"…",emote:"✦"};
+const STYLES={speech:"● ● ●",chat:"•••",thought:"•••",shout:"!",whisper:"…",emote:"✦"};
+const STYLE_LABELS={speech:"Classic",chat:"Chat",thought:"Thought",shout:"Shout",whisper:"Whisper",emote:"Magic"};
 const POSITIONS=["above","topLeft","topRight","left","right","below"];
 
 class Settings extends foundry.applications.api.HandlebarsApplicationMixin(foundry.applications.api.ApplicationV2) {
@@ -17,7 +18,9 @@ class Settings extends foundry.applications.api.HandlebarsApplicationMixin(found
     const cfg=game.settings.get(ID,"config"),mappings=cfg.mappings||{};
     const actors=game.actors.contents.slice().sort((a,b)=>a.name.localeCompare(b.name));
     return {...data,cfg,
-      styles:Object.keys(STYLES).map(id=>({id,selected:id===cfg.style})),
+      styles:Object.keys(STYLES).map(id=>({id,label:STYLE_LABELS[id],symbol:STYLES[id],selected:id===cfg.style})),
+      selectedStyle:STYLE_LABELS[cfg.style]||"Classic",
+      selectedSymbol:STYLES[cfg.style]||STYLES.speech,
       positions:POSITIONS.map(id=>({id,selected:id===cfg.position})),
       users:game.users.contents.map(u=>{
         const m=mappings[u.id]||{},actorId=m.actorId??u.character?.id??"";
@@ -31,6 +34,28 @@ class Settings extends foundry.applications.api.HandlebarsApplicationMixin(found
     super._onRender(context,options);
     const form=this.element.querySelector("form.tt-form");
     if(!form)return;
+    // Visual style picker: the hidden input is saved by the existing form.
+    const styleInput=form.querySelector('input[name="style"]');
+    const choices=[...form.querySelectorAll("[data-tt-bubble-style]")];
+    const preview=form.querySelector("[data-tt-selected-preview]");
+    const previewLabel=form.querySelector("[data-tt-selected-label]");
+    for(const button of choices){
+      button.addEventListener("click",()=>{
+        const style=button.dataset.ttBubbleStyle;
+        if(!Object.hasOwn(STYLES,style) || !styleInput)return;
+        styleInput.value=style;
+        for(const choice of choices){
+          const selected=choice.dataset.ttBubbleStyle===style;
+          choice.classList.toggle("is-selected",selected);
+          choice.setAttribute("aria-pressed",String(selected));
+        }
+        if(preview){
+          preview.className="tt-bubble-preview tt-style-"+style;
+          preview.textContent=STYLES[style];
+        }
+        if(previewLabel)previewLabel.textContent=STYLE_LABELS[style];
+      });
+    }
     form.addEventListener("submit",async e=>{
       e.preventDefault();
       if(!game.user.isGM)return;
@@ -56,7 +81,7 @@ class Settings extends foundry.applications.api.HandlebarsApplicationMixin(found
     form.querySelectorAll("[data-test-user]").forEach(button=>button.addEventListener("click",()=>{
       const row=button.closest(".tt-user");
       const actorId=row?.querySelector("select[name^='actor:']")?.value || "";
-      Tokens.test(button.dataset.testUser,actorId);
+      Tokens.test(button.dataset.testUser,actorId,styleInput?.value||"");
     }));
   }
 }
@@ -94,8 +119,9 @@ class Tokens{
     return tokens.find(t=>matches(t) && t.visible!==false)
       || tokens.find(matches) || null;
   }
-  static show(id,token,holdMs) {
+  static show(id,token,holdMs,styleOverride="") {
     const cfg=this.config();
+    const style=Object.hasOwn(STYLES,styleOverride)?styleOverride:cfg.style;
     let old=this.elements.get(id);
     if(old && old.token!==token){this.hide(id);old=null;}
     if(!old){
@@ -105,8 +131,8 @@ class Tokens{
       old={el,token,timer:null};
       this.elements.set(id,old);
     }
-    old.el.className="tt-speaking tt-style-"+cfg.style;
-    old.el.textContent=STYLES[cfg.style]||STYLES.speech;
+    old.el.className="tt-speaking tt-style-"+style;
+    old.el.textContent=STYLES[style]||STYLES.speech;
     old.el.style.setProperty("--tt-scale",String(cfg.scale));
     clearTimeout(old.timer);
     old.timer=setTimeout(()=>this.hide(id),holdMs??cfg.holdMs??2200);
@@ -171,7 +197,7 @@ class Tokens{
     }
     return true;
   }
-  static test(userId,actorId=""){
+  static test(userId,actorId="",style=""){
     if(!game.user.isGM)return;
     const user=game.users.get(userId);
     const resolved=actorId || this.config().mappings?.[userId]?.actorId || user?.character?.id;
@@ -190,7 +216,7 @@ class Tokens{
     }
     // Test uses the actor currently selected in the form, even before Save.
     // This is a LOCAL preview; real speaker events are synchronized via sockets.
-    this.show(userId,token,2200);
+    this.show(userId,token,2200,style);
     if(this.draw())ui.notifications.info("Talking Tokens: Test bubble displayed for "+(user?.name||"player")+".");
     else ui.notifications.error("Talking Tokens: Could not locate the canvas element. See F12 console.");
   }
