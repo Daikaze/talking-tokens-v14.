@@ -180,14 +180,14 @@ Hooks.once("init",()=>{
   game.keybindings.register(TT_ID,"toggleGmNpc",{
     name:"GM → NPC Voice Target (Toggle)",
     hint:"Select exactly one token, then toggle automatic GM Discord voice routing.",
-    editable:[{key:"KeyN",modifiers:["SHIFT"]}],
+    editable:[{key:"KeyN",modifiers:[foundry.helpers.interaction.KeyboardManager.MODIFIER_KEYS.SHIFT]}],
     restricted:true,repeat:false,
     onDown:()=>{if(!game.user.isGM)return false;return GMNpcVoice.toggleTarget();}
   });
   game.keybindings.register(TT_ID,"manualGmNpc",{
     name:"GM → NPC Manual Speech (Hold)",
     hint:"Hold to show the selected NPC speaking even without Discord. First arm it with Shift+N.",
-    editable:[{key:"KeyM",modifiers:["SHIFT"]}],
+    editable:[{key:"KeyM",modifiers:[foundry.helpers.interaction.KeyboardManager.MODIFIER_KEYS.SHIFT]}],
     restricted:true,repeat:false,
     onDown:()=>{if(!game.user.isGM)return false;return GMNpcVoice.startManual();},
     onUp:()=>{if(!game.user.isGM)return false;return GMNpcVoice.stopManual();}
@@ -199,6 +199,10 @@ Hooks.once("ready",()=>{
   Hooks.on(GM_HOOK,message=>GMNpcVoice.receiveGMVoice(message));
   Hooks.on("canvasTearDown",()=>GMNpcVoice.deactivate());
   window.addEventListener("blur",()=>GMNpcVoice.stopManual());
+  // If the modifier is released before M, do not leave the manual bubble active.
+  window.addEventListener("keyup",event=>{
+    if(["KeyM","ShiftLeft","ShiftRight"].includes(event.code))GMNpcVoice.stopManual();
+  });
   const api=GMNpcVoice.api;
   if(api)api.gmNpc={
     toggleTarget:()=>GMNpcVoice.toggleTarget(),

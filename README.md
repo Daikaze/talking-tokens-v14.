@@ -1,4 +1,4 @@
-# Talking Tokens V14 — v0.2.1 Beta
+# Talking Tokens V14 — v0.2.2 Beta
 
 **Talking Tokens** is a Foundry VTT V14 module that displays speech indicators over character tokens. The original **Test** button was confirmed working in the Averis D&D campaign. The v0.2.x features are packaged for live testing.
 
@@ -86,3 +86,7 @@ To customize keybinds, open **Game Settings → Configure Controls → Talking T
 The targeting uses the placed token's ID, so separate NPC instances can speak independently. When you leave the scene, the NPC mode disengages automatically. The hotkeys are only available to GMs. The selected NPC does not need a Discord ID of its own, since it speaks through your account.
 
 **Note:** Discord must be connected for automatic voice activity. The manual Shift+M control works without a bot. This is a beta feature that should be verified with real players.
+
+### v0.2.2 hotkey reliability
+
+Shortcuts use Foundry V14's official modifier key constants. The manual speaking indicator also switches off on key release or when the Foundry window loses focus. The configured shortcuts can be changed under Configure Controls.
