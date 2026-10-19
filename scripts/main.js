@@ -3,7 +3,7 @@ const CH="module."+ID;
 const DEFAULT={
   bridgeEnabled:false,bridgeUrl:"ws://127.0.0.1:47944",
   style:"speech",position:"above",scale:1,holdMs:2200,showForGM:false,
-  imagePath:"",animation:"pulse",mappings:{}
+  imagePath:"",animation:"pulse",mappings:{},globalBubbleOffset:{x:0,y:0}
 };
 const STYLES={speech:"● ● ●",chat:"•••",thought:"•••",shout:"!",whisper:"…",emote:"✦"};
 const STYLE_LABELS={speech:"Classic",chat:"Chat",thought:"Thought",shout:"Shout",whisper:"Whisper",emote:"Magic"};
@@ -78,6 +78,15 @@ class Settings extends foundry.applications.api.HandlebarsApplicationMixin(found
         if(previewLabel)previewLabel.textContent=STYLE_LABELS[style];
       });
     }
+    form.querySelector('[data-tt-global-editor]')?.addEventListener("click",()=>{
+      // The settings window would cover the token; close it before editing.
+      this.close();
+      game.modules.get(ID)?.api?.bubbleEditor?.openGlobal();
+    });
+    form.querySelector('[data-tt-token-editor]')?.addEventListener("click",()=>{
+      this.close();
+      game.modules.get(ID)?.api?.bubbleEditor?.openToken();
+    });
     form.querySelector('[data-tt-gm-npc-toggle]')?.addEventListener("click",()=>{
       game.modules.get(ID)?.api?.gmNpc?.toggleTarget();
     });
@@ -225,7 +234,10 @@ class Tokens{
     }
     old.el.className="tt-speaking tt-style-"+style+" tt-anim-"+animation+(customImage?" tt-custom-image":"");
     old.el.style.setProperty("--tt-bubble-color",color);
-    old.el.style.setProperty("--tt-scale",String(cfg.scale));
+    const tokenScale=Number(token.document?.getFlag?.(ID,"bubbleScale"));
+    old.el.style.setProperty("--tt-scale",String(
+      tokenScale>=0.5 && tokenScale<=3 ? tokenScale : cfg.scale
+    ));
     if(customImage){
       const img=document.createElement("img");
       img.className="tt-bubble-art";
@@ -303,12 +315,15 @@ class Tokens{
         else if(pos==="right"){px=x+w;py=y+h/2;anchor="right";}
         else if(pos==="below"){py=y+h;anchor="below";}
         const editor=game.modules.get(ID)?.api?.bubbleEditor;
-        const draft=editor?.draftFor?.(t);
-        const stored=t.document?.getFlag?.(ID,"bubbleOffset");
-        const offset=draft||stored||{};
-        px+=(Number(offset.x)||0);
-        py+=(Number(offset.y)||0);
-        // While editing, show one editable preview rather than two overlapping bubbles.
+        const local=t.document?.getFlag?.(ID,"bubbleOffset")||{};
+        const globalOffset=cfg.globalBubbleOffset||{};
+        px+=(Number(globalOffset.x)||0)+(Number(local.x)||0);
+        py+=(Number(globalOffset.y)||0)+(Number(local.y)||0);
+        // Scene offset affects all token bubbles; token flags remain optional adjustments.
+        const tokenScale=Number(t.document?.getFlag?.(ID,"bubbleScale"));
+        const effectiveScale=tokenScale>=0.5&&tokenScale<=3?tokenScale:cfg.scale;
+        it.el.style.setProperty("--tt-scale",String(effectiveScale||1));
+        // Hide the live bubble while editing this token to avoid a duplicate.
         it.el.style.visibility=editor?.isEditingToken?.(t) ? "hidden" : "visible";
         const p=canvas.stage.toGlobal({x:px,y:py});
         it.el.style.left=(rect.left+p.x*sx)+"px";

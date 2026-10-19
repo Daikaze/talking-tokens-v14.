@@ -1,12 +1,20 @@
 /**
- * Talking Tokens v0.2.3 — GM-only bubble position editor
- * Shift+B toggles editing for the selected token, or the armed GM NPC.
- * Drag the visible bubble preview. Offset is saved on the placed TokenDocument.
+ * Talking Tokens v0.2.4 — direct world-wide Move + Resize bubble editor.
+ *
+ * Shift+B edits GLOBAL placement and global scale, not merely one token.
+ * Optional "This Token" mode stores per-token adjustments in TokenDocument flags.
+ * Preview drag/resize values are kept locally until pointerup; then persisted.
  */
 const TT_BUBBLE_ID="talking-tokens-v14";
 class TalkingBubblePositionEditor {
-  static active=null; // {sceneId,tokenId,token,element,panel,offset,drag,frame}
+  static active=null;
   static MAX_OFFSET=10000;
+  static MIN_SCALE=.5;
+  static MAX_SCALE=3;
+
+  static cfg(){return game.settings.get(TT_BUBBLE_ID,"config");}
+  static clampScale(v){return Math.max(this.MIN_SCALE,Math.min(this.MAX_SCALE,Math.round(v*20)/20));}
+  static offset(o){return {x:Number(o?.x)||0,y:Number(o?.y)||0};}
 
   static targetToken() {
     if(!canvas?.ready || !game.user?.isGM)return null;
@@ -20,175 +28,263 @@ class TalkingBubblePositionEditor {
   }
 
   static isEditingToken(token) {
-    return !!this.active && !!token &&
-      this.active.sceneId===canvas.scene?.id && this.active.tokenId===token.document?.id;
+    return !!this.active && !!token
+      && this.active.sceneId===canvas.scene?.id
+      && this.active.tokenId===token.document?.id;
   }
-  static draftFor(token) {
-    return this.isEditingToken(token) ? this.active.offset : null;
-  }
+  static draftFor(token){return this.isEditingToken(token)?this.active:null;}
 
-  static toggle() {
+  static toggle(){if(this.active){this.close();return true;}return this.openGlobal();}
+  static openGlobal(){return this.open("global");}
+  static openToken(){return this.open("token");}
+
+  static open(scope="global"){
     if(!game.user?.isGM)return false;
-    if(this.active){this.close();return true;}
     const token=this.targetToken();
     if(!token?.document || !canvas?.ready){
-      ui.notifications.warn("Talking Tokens: Select one token (or arm one NPC with Shift+N) before moving a bubble.");
+      ui.notifications.warn("Talking Tokens: Select exactly one token or arm an NPC with Shift+N first.");
       return false;
     }
-    this.open(token);
-    return true;
-  }
-
-  static open(token) {
     this.close();
-    const previous=token.document.getFlag(TT_BUBBLE_ID,"bubbleOffset")||{};
-    const offset={x:Number(previous.x)||0,y:Number(previous.y)||0};
+    const cfg=this.cfg();
+    const s=scope==="token"?"token":"global";
+    const originalOffset=s==="global"
+      ? cfg.globalBubbleOffset
+      : token.document.getFlag(TT_BUBBLE_ID,"bubbleOffset");
+    const savedTokenScale=Number(token.document.getFlag(TT_BUBBLE_ID,"bubbleScale"));
+    const currentScale=s==="global" ? cfg.scale
+      : (savedTokenScale>=this.MIN_SCALE&&savedTokenScale<=this.MAX_SCALE?savedTokenScale:cfg.scale);
+    const offset=this.offset(originalOffset);
     const bubble=document.createElement("div");
-    const cfg=game.settings.get(TT_BUBBLE_ID,"config");
     const style=cfg.style||"speech";
     bubble.className="tt-speaking tt-editor-bubble tt-style-"+style;
-    bubble.setAttribute("role","button");
-    bubble.setAttribute("tabindex","0");
-    bubble.setAttribute("aria-label","Drag to position the token speech bubble");
-    bubble.title="Drag this bubble to the desired position";
-    bubble.style.setProperty("--tt-scale",String(cfg.scale||1));
+    bubble.setAttribute("role","group");
+    bubble.setAttribute("aria-label","Move and resize talking bubble preview");
+    bubble.title="Drag to move. Drag the lower-right grip to resize.";
+    bubble.style.setProperty("--tt-scale",String(currentScale||1));
     if(cfg.imagePath){
       bubble.classList.add("tt-custom-image");
       const img=document.createElement("img");
-      img.className="tt-bubble-art";
-      img.src=cfg.imagePath;img.alt="";
-      bubble.replaceChildren(img);
+      img.className="tt-bubble-art";img.src=cfg.imagePath;img.alt="";
+      img.draggable=false;
+      bubble.append(img);
     } else {
-      bubble.textContent={speech:"● ● ●",chat:"•••",thought:"•••",shout:"!",whisper:"…",emote:"✦"}[style]||"● ● ●";
+      const text=document.createElement("span");
+      text.className="tt-editor-text";
+      text.textContent={speech:"● ● ●",chat:"•••",thought:"•••",shout:"!",whisper:"…",emote:"✦"}[style]||"● ● ●";
+      bubble.append(text);
     }
-    bubble.addEventListener("pointerdown",event=>this.startDrag(event));
+    const grip=document.createElement("div");
+    grip.className="tt-bubble-resize-grip";
+    grip.title="Drag to resize bubble";
+    grip.setAttribute("role","button");
+    grip.setAttribute("aria-label","Drag to resize bubble");
+    bubble.append(grip);
+    bubble.addEventListener("pointerdown",e=>this.begin(e,"move"));
+    grip.addEventListener("pointerdown",e=>this.begin(e,"resize"));
+
     const panel=document.createElement("div");
     panel.id="tt-bubble-editor-panel";
-    const label=document.createElement("strong");
-    label.textContent="Move bubble: "+(token.document.name||token.actor?.name||"Token");
-    const sub=document.createElement("span");
-    sub.textContent="Drag the bubble • position saves when released";
+    const title=document.createElement("strong");
+    title.textContent="Move / Resize Bubble";
+    const info=document.createElement("span");
+    info.className="tt-editor-info";
+    info.textContent="Drag bubble to move • Drag ↘ grip to resize";
+    const scopeLabel=document.createElement("label");
+    scopeLabel.textContent="Apply to: ";
+    const select=document.createElement("select");
+    const optionAll=document.createElement("option");
+    optionAll.value="global";optionAll.textContent="Global — all bubbles";
+    const optionToken=document.createElement("option");
+    optionToken.value="token";optionToken.textContent="This token only";
+    select.append(optionAll,optionToken);
+    select.value=s;
+    select.addEventListener("change",()=>this.changeScope(select.value));
+    scopeLabel.append(select);
+    const percent=document.createElement("strong");
+    percent.className="tt-editor-percent";
     const reset=document.createElement("button");
-    reset.type="button";reset.textContent="Reset position";
+    reset.type="button";reset.textContent="Reset";
     reset.addEventListener("click",()=>void this.reset());
     const done=document.createElement("button");
     done.type="button";done.textContent="Done (Shift+B)";
     done.addEventListener("click",()=>this.close());
-    panel.append(label,sub,reset,done);
+    panel.append(title,info,scopeLabel,percent,reset,done);
     document.body.append(bubble,panel);
-    this.active={sceneId:canvas.scene.id,tokenId:token.document.id,token,element:bubble,panel,offset,drag:null,frame:0};
+    this.active={
+      sceneId:canvas.scene.id,tokenId:token.document.id,token,
+      element:bubble,panel,scope:s,offset,scale:this.clampScale(Number(currentScale)||1),
+      drag:null,frame:0,percent,select
+    };
+    this.updatePreview();
     this.renderFrame();
-    ui.notifications.info("Talking Tokens: Drag the bubble, then press Shift+B or Done.");
+    ui.notifications.info("Talking Tokens: Editing "+(s==="global"?"GLOBAL bubbles (all tokens).":"this token.")+" Drag to move or use the corner grip to resize.");
+    return true;
   }
 
-  static toWorld(clientX,clientY) {
-    const canvasElement=canvas.app?.canvas||canvas.app?.view||canvas.app?.renderer?.canvas
+  static changeScope(scope){
+    if(!this.active || this.active.drag)return;
+    const entry=this.active;
+    const global=scope!=="token";
+    const cfg=this.cfg();
+    entry.scope=global?"global":"token";
+    entry.offset=this.offset(global?cfg.globalBubbleOffset:entry.token.document.getFlag(TT_BUBBLE_ID,"bubbleOffset"));
+    const localScale=Number(entry.token.document.getFlag(TT_BUBBLE_ID,"bubbleScale"));
+    entry.scale=this.clampScale(global?(Number(cfg.scale)||1):
+      (localScale>=this.MIN_SCALE&&localScale<=this.MAX_SCALE?localScale:Number(cfg.scale)||1));
+    entry.select.value=entry.scope;
+    this.updatePreview();
+  }
+
+  static board(){
+    const node=canvas.app?.canvas||canvas.app?.view||canvas.app?.renderer?.canvas
       ||document.querySelector("canvas#board");
-    const rect=canvasElement?.getBoundingClientRect?.();
-    if(!rect?.width || !rect?.height)return null;
-    const renderer=canvas.app?.renderer?.screen;
-    const factorX=rect.width/(renderer?.width||canvasElement.width||rect.width);
-    const factorY=rect.height/(renderer?.height||canvasElement.height||rect.height);
-    return canvas.stage.toLocal({
-      x:(clientX-rect.left)/factorX,y:(clientY-rect.top)/factorY
-    });
+    const rect=node?.getBoundingClientRect?.();
+    if(!rect?.width||!rect?.height)return null;
+    const screen=canvas.app?.renderer?.screen;
+    return {rect,sx:rect.width/(screen?.width||node.width||rect.width),
+      sy:rect.height/(screen?.height||node.height||rect.height)};
   }
 
-  static startDrag(e) {
-    if(!this.active || e.button!==0)return;
+  static toWorld(clientX,clientY){
+    const b=this.board();
+    if(!b)return null;
+    try {
+      return canvas.stage.toLocal({x:(clientX-b.rect.left)/b.sx,y:(clientY-b.rect.top)/b.sy});
+    }catch(e){console.warn(TT_BUBBLE_ID,"Cannot convert coordinates",e);return null;}
+  }
+
+  static begin(e,type){
+    const entry=this.active;
+    if(!entry || e.button!==0)return;
     const world=this.toWorld(e.clientX,e.clientY);
     if(!world)return;
     e.preventDefault();e.stopPropagation();
-    this.active.drag={pointerId:e.pointerId,x:world.x,y:world.y,
-      originalX:this.active.offset.x,originalY:this.active.offset.y};
-    try{this.active.element.setPointerCapture(e.pointerId);}catch(_){}
-    this.active.element.classList.add("is-dragging");
+    entry.drag={type,pointerId:e.pointerId,
+      clientX:e.clientX,clientY:e.clientY,
+      worldX:world.x,worldY:world.y,
+      originOffset:this.offset(entry.offset),originScale:entry.scale};
+    try{entry.element.setPointerCapture(e.pointerId);}catch(_){}
+    entry.element.classList.add("is-dragging");
   }
 
-  static move(e) {
-    if(!this.active?.drag || e.pointerId!==this.active.drag.pointerId)return;
-    const world=this.toWorld(e.clientX,e.clientY);
-    if(!world)return;
-    const {x,y,originalX,originalY}=this.active.drag;
-    const cap=this.MAX_OFFSET;
-    this.active.offset={
-      x:Math.max(-cap,Math.min(cap,Math.round(originalX+world.x-x))),
-      y:Math.max(-cap,Math.min(cap,Math.round(originalY+world.y-y)))
-    };
-    this.positionPreview();
-  }
-
-  static async release(e) {
-    if(!this.active?.drag || e.pointerId!==this.active.drag.pointerId)return;
+  static move(e){
     const entry=this.active;
+    if(!entry?.drag || e.pointerId!==entry.drag.pointerId)return;
+    const drag=entry.drag;
+    if(drag.type==="move"){
+      const world=this.toWorld(e.clientX,e.clientY);
+      if(!world)return;
+      entry.offset={
+        x:Math.max(-this.MAX_OFFSET,Math.min(this.MAX_OFFSET,Math.round(drag.originOffset.x+world.x-drag.worldX))),
+        y:Math.max(-this.MAX_OFFSET,Math.min(this.MAX_OFFSET,Math.round(drag.originOffset.y+world.y-drag.worldY)))
+      };
+    }else{
+      // Horizontal-right or diagonal-up drag increases scale.
+      const delta=(e.clientX-drag.clientX)-(e.clientY-drag.clientY);
+      entry.scale=this.clampScale(drag.originScale+delta/130);
+    }
+    this.updatePreview();
+  }
+
+  static async save(entry){
+    try{
+      if(entry.scope==="global"){
+        // Preserve all other world settings (Discord mappings, bubble styles, etc.).
+        const cfg=this.cfg();
+        await game.settings.set(TT_BUBBLE_ID,"config",{
+          ...cfg,globalBubbleOffset:this.offset(entry.offset),scale:this.clampScale(entry.scale)
+        });
+        ui.notifications.info("Talking Tokens: GLOBAL bubble position and size saved for all players.");
+      } else {
+        await entry.token.document.setFlag(TT_BUBBLE_ID,"bubbleOffset",this.offset(entry.offset));
+        await entry.token.document.setFlag(TT_BUBBLE_ID,"bubbleScale",this.clampScale(entry.scale));
+        ui.notifications.info("Talking Tokens: This token's position and size saved.");
+      }
+    }catch(error){
+      console.error(TT_BUBBLE_ID,"Could not save bubble position/size",error);
+      ui.notifications.error("Talking Tokens: Could not save changes.");
+    }
+  }
+
+  static async release(e){
+    const entry=this.active;
+    if(!entry?.drag || e.pointerId!==entry.drag.pointerId)return;
     this.move(e);
     entry.drag=null;
     entry.element.classList.remove("is-dragging");
     try{entry.element.releasePointerCapture(e.pointerId);}catch(_){}
-    try{
-      await entry.token.document.setFlag(TT_BUBBLE_ID,"bubbleOffset",{
-        x:entry.offset.x,y:entry.offset.y
-      });
-      ui.notifications.info("Talking Tokens: Saved bubble position for "+(entry.token.document.name||"token")+".");
-    }catch(error){
-      console.error(TT_BUBBLE_ID,"Bubble offset save failed",error);
-      ui.notifications.error("Talking Tokens: Could not save bubble position. Check token permission.");
-    }
+    await this.save(entry);
   }
 
-  static async reset() {
-    if(!this.active)return;
+  static async reset(){
     const entry=this.active;
+    if(!entry)return;
+    entry.drag=null;
     entry.offset={x:0,y:0};
-    this.positionPreview();
-    try{
-      await entry.token.document.unsetFlag(TT_BUBBLE_ID,"bubbleOffset");
-      ui.notifications.info("Talking Tokens: Restored default bubble position.");
-    }catch(error){
-      console.error(TT_BUBBLE_ID,"Bubble reset failed",error);
-      ui.notifications.error("Talking Tokens: Could not reset bubble position.");
+    if(entry.scope==="global"){
+      entry.scale=1;
+    }else{
+      entry.scale=this.clampScale(Number(this.cfg().scale)||1);
+      try{
+        await entry.token.document.unsetFlag(TT_BUBBLE_ID,"bubbleOffset");
+        await entry.token.document.unsetFlag(TT_BUBBLE_ID,"bubbleScale");
+        ui.notifications.info("Talking Tokens: Token overrides removed.");
+      }catch(error){
+        console.error(TT_BUBBLE_ID,error);
+        ui.notifications.error("Talking Tokens: Could not reset token overrides.");
+      }
+      this.updatePreview();
+      return;
     }
+    this.updatePreview();
+    await this.save(entry);
   }
 
-  static positionPreview() {
+  static updatePreview(){
+    const entry=this.active;
+    if(!entry)return;
+    entry.element.style.setProperty("--tt-scale",String(entry.scale));
+    entry.percent.textContent=Math.round(entry.scale*100)+"%";
+    this.positionPreview();
+  }
+
+  static positionPreview(){
     const entry=this.active;
     if(!entry||!canvas?.ready)return;
-    if(canvas.scene?.id!==entry.sceneId || !canvas.tokens?.placeables?.includes(entry.token)){
+    if(entry.sceneId!==canvas.scene?.id || !canvas.tokens?.placeables?.includes(entry.token)){
       this.close();return;
     }
-    const canvasElement=canvas.app?.canvas||canvas.app?.view||canvas.app?.renderer?.canvas
-      ||document.querySelector("canvas#board");
-    const rect=canvasElement?.getBoundingClientRect?.();
-    if(!rect?.width||!rect?.height)return;
-    const screen=canvas.app?.renderer?.screen;
-    const factorX=rect.width/(screen?.width||canvasElement.width||rect.width);
-    const factorY=rect.height/(screen?.height||canvasElement.height||rect.height);
-    const t=entry.token;
-    const x=t.document.x,y=t.document.y,w=t.w,h=t.h;
-    const pos=game.settings.get(TT_BUBBLE_ID,"config").position;
+    const b=this.board();
+    if(!b)return;
+    const cfg=this.cfg();
+    const token=entry.token;
+    const x=token.document.x,y=token.document.y,w=token.w,h=token.h;
     let px=x+w/2,py=y,anchor="above";
-    if(pos==="topLeft"){px=x;}
-    else if(pos==="topRight"){px=x+w;}
-    else if(pos==="left"){px=x;py=y+h/2;anchor="left";}
-    else if(pos==="right"){px=x+w;py=y+h/2;anchor="right";}
-    else if(pos==="below"){py=y+h;anchor="below";}
-    px+=entry.offset.x;
-    py+=entry.offset.y;
-    const pt=canvas.stage.toGlobal({x:px,y:py});
-    entry.element.style.left=(rect.left+pt.x*factorX)+"px";
-    entry.element.style.top=(rect.top+pt.y*factorY)+"px";
+    if(cfg.position==="topLeft")px=x;
+    else if(cfg.position==="topRight")px=x+w;
+    else if(cfg.position==="left"){px=x;py=y+h/2;anchor="left";}
+    else if(cfg.position==="right"){px=x+w;py=y+h/2;anchor="right";}
+    else if(cfg.position==="below"){py=y+h;anchor="below";}
+    const global=entry.scope==="global"?entry.offset:this.offset(cfg.globalBubbleOffset);
+    const local=entry.scope==="token"?entry.offset:this.offset(token.document.getFlag(TT_BUBBLE_ID,"bubbleOffset"));
+    px+=global.x+local.x;
+    py+=global.y+local.y;
+    const p=canvas.stage.toGlobal({x:px,y:py});
+    entry.element.style.left=(b.rect.left+p.x*b.sx)+"px";
+    entry.element.style.top=(b.rect.top+p.y*b.sy)+"px";
     entry.element.dataset.anchor=anchor;
   }
 
-  static renderFrame() {
+  static renderFrame(){
     if(!this.active)return;
     this.positionPreview();
     if(this.active)this.active.frame=requestAnimationFrame(()=>this.renderFrame());
   }
 
-  static close() {
-    if(!this.active)return;
+  static close(){
     const entry=this.active;
+    if(!entry)return;
     this.active=null;
     if(entry.frame)cancelAnimationFrame(entry.frame);
     entry.element.remove();
@@ -198,8 +294,8 @@ class TalkingBubblePositionEditor {
 
 Hooks.once("init",()=>{
   game.keybindings.register(TT_BUBBLE_ID,"moveBubble",{
-    name:"GM — Move Token Talking Bubble",
-    hint:"Select a token and press Shift+B to drag its talking bubble, then save automatically on release.",
+    name:"GM — Move / Resize ALL Talking Bubbles",
+    hint:"Select one token as a preview and press Shift+B. Changes default to Global (all tokens).",
     editable:[{key:"KeyB",modifiers:[foundry.helpers.interaction.KeyboardManager.MODIFIER_KEYS.SHIFT]}],
     restricted:true,repeat:false,
     onDown:()=>TalkingBubblePositionEditor.toggle()
@@ -210,12 +306,13 @@ Hooks.once("ready",()=>{
   if(!api)return;
   api.bubbleEditor={
     toggle:()=>TalkingBubblePositionEditor.toggle(),
+    openGlobal:()=>TalkingBubblePositionEditor.openGlobal(),
+    openToken:()=>TalkingBubblePositionEditor.openToken(),
     close:()=>TalkingBubblePositionEditor.close(),
     reset:()=>TalkingBubblePositionEditor.reset(),
     isEditingToken:t=>TalkingBubblePositionEditor.isEditingToken(t),
     draftFor:t=>TalkingBubblePositionEditor.draftFor(t)
   };
-  // Capturing on window means dragging works even when the pointer leaves the bubble.
   window.addEventListener("pointermove",e=>TalkingBubblePositionEditor.move(e));
   window.addEventListener("pointerup",e=>void TalkingBubblePositionEditor.release(e));
   window.addEventListener("pointercancel",e=>void TalkingBubblePositionEditor.release(e));
