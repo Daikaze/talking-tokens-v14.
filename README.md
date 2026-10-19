@@ -90,3 +90,25 @@ The targeting uses the placed token's ID, so separate NPC instances can speak in
 ### v0.2.2 hotkey reliability
 
 Shortcuts use Foundry V14's official modifier key constants. The manual speaking indicator also switches off on key release or when the Foundry window loses focus. The configured shortcuts can be changed under Configure Controls.
+
+
+## v0.2.3 — Drag to move bubble / Hide GM voice bar
+
+**Change the bubble location for any token (saved for the scene and seen by all players):**
+
+1. Select ONE token as GM (or arm your NPC with Shift+N).
+2. Press **Shift+B**, or click **Move bubble** on the GM NPC voice bar.
+3. An editable bubble outlined in orange appears over the token. Drag it with your mouse to the desired position.
+4. Release the mouse: the position is saved automatically on that placed token (as a TokenDocument flag). Click **Done** or press **Shift+B** again.
+5. Use **Reset position** in the editor to restore the default position for that token.
+
+The offset is measured in scene units and tracks token movement and canvas zoom. Other players see the changed position on their own canvases when the bubble is active. Each placed token can have a different offset, even when multiple tokens use the same NPC Actor.
+
+**Hide the GM → NPC voice bar without disabling voice routing:**
+
+- Press **Shift+H** while the Foundry canvas is focused to hide/show the bottom-left bar.
+- Or click **×** on that bar to hide it.
+- Or open **Game Settings → Module Settings → Show GM → NPC floating voice bar** and change the checkbox.
+- Your current NPC voice routing remains active when the bar is hidden. Use Shift+N to stop or switch NPCs; hold Shift+M to speak manually even without the bar. Press Shift+H to restore the bar.
+
+All three hotkeys are editable in **Game Settings → Configure Controls → Talking Tokens V14**. Bubble offset and position editor are GM-only; there is no need to change the Discord Bridge.

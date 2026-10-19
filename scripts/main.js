@@ -302,6 +302,14 @@ class Tokens{
         else if(pos==="left"){px=x;py=y+h/2;anchor="left";}
         else if(pos==="right"){px=x+w;py=y+h/2;anchor="right";}
         else if(pos==="below"){py=y+h;anchor="below";}
+        const editor=game.modules.get(ID)?.api?.bubbleEditor;
+        const draft=editor?.draftFor?.(t);
+        const stored=t.document?.getFlag?.(ID,"bubbleOffset");
+        const offset=draft||stored||{};
+        px+=(Number(offset.x)||0);
+        py+=(Number(offset.y)||0);
+        // While editing, show one editable preview rather than two overlapping bubbles.
+        it.el.style.visibility=editor?.isEditingToken?.(t) ? "hidden" : "visible";
         const p=canvas.stage.toGlobal({x:px,y:py});
         it.el.style.left=(rect.left+p.x*sx)+"px";
         it.el.style.top=(rect.top+p.y*sy)+"px";

@@ -130,9 +130,22 @@ class GMNpcVoice {
     return true;
   }
 
+  static async setHUDVisible(visible) {
+    if(!this.isGM)return;
+    await game.settings.set(TT_ID,"gmNpcHudVisible",Boolean(visible));
+    this.renderHUD();
+    if(visible && this.target)ui.notifications.info("Talking Tokens: GM voice bar visible.");
+  }
+
+  static toggleHUD() {
+    if(!this.isGM)return false;
+    void this.setHUDVisible(!game.settings.get(TT_ID,"gmNpcHudVisible"));
+    return true;
+  }
+
   static renderHUD(){
     if(!this.isGM)return;
-    if(!this.target){
+    if(!this.target || !game.settings.get(TT_ID,"gmNpcHudVisible")){
       this.indicator?.remove();
       this.indicator=null;
       return;
@@ -150,6 +163,15 @@ class GMNpcVoice {
       stop.type="button";stop.className="tt-gm-npc-stop";stop.textContent="Stop (Shift+N)";
       stop.title="Stop speaking through this NPC";
       stop.addEventListener("click",()=>this.deactivate());
+      const move=document.createElement("button");
+      move.type="button";move.className="tt-gm-npc-move";
+      move.textContent="Move bubble";move.title="Drag the bubble to set its position (Shift+B)";
+      move.addEventListener("click",()=>game.modules.get(TT_ID)?.api?.bubbleEditor?.toggle());
+      const hide=document.createElement("button");
+      hide.type="button";hide.className="tt-gm-npc-hide";
+      hide.title="Hide the panel (Shift+H will show it again)";
+      hide.textContent="×";
+      hide.addEventListener("click",()=>void this.setHUDVisible(false));
       const talk=document.createElement("button");
       talk.type="button";talk.className="tt-gm-npc-talk";talk.textContent="Hold to Talk";
       talk.title="Hold to show the NPC bubble manually, without Discord";
@@ -162,7 +184,7 @@ class GMNpcVoice {
       for(const type of ["pointerup","pointercancel","lostpointercapture"]){
         talk.addEventListener(type,()=>this.stopManual());
       }
-      root.append(icon,label,talk,stop);
+      root.append(icon,label,talk,move,stop,hide);
       document.body.append(root);
       this.indicator=root;
     }
@@ -175,6 +197,12 @@ class GMNpcVoice {
 }
 
 Hooks.once("init",()=>{
+  game.settings.register(TT_ID,"gmNpcHudVisible",{
+    name:"Show GM → NPC floating voice bar",
+    hint:"Hide the GM-only bottom-left NPC voice panel without disabling the voice mode. Press Shift+H to restore it.",
+    scope:"client",config:true,type:Boolean,default:true,
+    onChange:()=>GMNpcVoice.renderHUD()
+  });
   // Foundry V14 built-in keybinding manager. Users may remap these keys in
   // Game Settings > Configure Controls > Talking Tokens V14.
   game.keybindings.register(TT_ID,"toggleGmNpc",{
@@ -183,6 +211,13 @@ Hooks.once("init",()=>{
     editable:[{key:"KeyN",modifiers:[foundry.helpers.interaction.KeyboardManager.MODIFIER_KEYS.SHIFT]}],
     restricted:true,repeat:false,
     onDown:()=>{if(!game.user.isGM)return false;return GMNpcVoice.toggleTarget();}
+  });
+  game.keybindings.register(TT_ID,"toggleGmNpcHud",{
+    name:"GM → NPC Voice Panel: Show / Hide",
+    hint:"Toggle the floating GM voice panel, without stopping speech routing.",
+    editable:[{key:"KeyH",modifiers:[foundry.helpers.interaction.KeyboardManager.MODIFIER_KEYS.SHIFT]}],
+    restricted:true,repeat:false,
+    onDown:()=>GMNpcVoice.toggleHUD()
   });
   game.keybindings.register(TT_ID,"manualGmNpc",{
     name:"GM → NPC Manual Speech (Hold)",
@@ -209,7 +244,10 @@ Hooks.once("ready",()=>{
     deactivate:()=>GMNpcVoice.deactivate(),
     startManual:()=>GMNpcVoice.startManual(),
     stopManual:()=>GMNpcVoice.stopManual(),
-    getTarget:()=>GMNpcVoice.target
+    getTarget:()=>GMNpcVoice.target,
+    toggleHUD:()=>GMNpcVoice.toggleHUD(),
+    showHUD:()=>GMNpcVoice.setHUDVisible(true),
+    hideHUD:()=>GMNpcVoice.setHUDVisible(false)
   };
 });
 
