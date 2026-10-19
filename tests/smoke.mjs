@@ -9,7 +9,7 @@ function sandbox() {
   const errors = [];
   const nodes = [];
   const config = {
-    style: "speech", position: "above", scale: 1.75, holdMs: 2200,
+    style: "speech", position: "above", scale: 1.75, zoomBehavior:"fixed", holdMs: 2200,
     animation: "pulse", globalBubbleOffset: {x: 25, y: -18},
     mappings: {player: {enabled: true, actorId: "actor1"}}
   };
@@ -28,7 +28,7 @@ function sandbox() {
       canvas:{getBoundingClientRect:()=>({left:0,top:0,width:1000,height:800})},
       renderer:{screen:{width:1000,height:800}}
     },
-    stage:{toGlobal:p=>p}
+    stage:{scale:{x:1},toGlobal:p=>({x:p.x*canvas.stage.scale.x,y:p.y*canvas.stage.scale.x})}
   };
   const listeners = {};
   const Hooks = {
@@ -73,7 +73,7 @@ function sandbox() {
   vm.runInContext(source, ctx, {filename:"scripts/main.js"});
   for(const cb of listeners.init||[])cb();
   for(const cb of listeners.ready||[])cb();
-  return {module,config,token,nodes,errors};
+  return {module,config,token,nodes,errors,canvas};
 }
 
 test("player voice draws using global offset and scale",()=>{
@@ -109,5 +109,42 @@ test("global configuration changes move an already visible bubble",()=>{
   });
   assert.equal(v.nodes[0].style.left,"140px");
   assert.equal(v.nodes[0].style.top,"245px");
+  assert.deepEqual(v.errors,[]);
+});
+
+
+test("fixed-size bubbles keep CSS scale and 35px offset when zooming the map",()=>{
+  const v=sandbox();
+  v.module.api.handleNpcSpeaking({
+    type:"npc-speaking",sceneId:"scene1",tokenId:"tok1",speaking:true
+  });
+  const node=v.nodes[0];
+  v.canvas.stage.scale.x=2;
+  v.module.api.handleNpcSpeaking({
+    type:"npc-speaking",sceneId:"scene1",tokenId:"tok1",speaking:true
+  });
+  assert.equal(node.style.left,"335px"); // 2*150 + 35 CSS px
+  assert.equal(node.style.top,"387px");  // 2*200 - 13 CSS px
+  assert.equal(node.style["--tt-scale"],"1.75"); // not 3.5
+  v.canvas.stage.scale.x=.5;
+  v.module.api.handleNpcSpeaking({
+    type:"npc-speaking",sceneId:"scene1",tokenId:"tok1",speaking:true
+  });
+  assert.equal(node.style.left,"110px");
+  assert.equal(node.style.top,"87px");
+  assert.equal(node.style["--tt-scale"],"1.75");
+  assert.deepEqual(v.errors,[]);
+});
+
+test("follow-map mode scales bubble and offsets with camera zoom",()=>{
+  const v=sandbox();
+  v.config.zoomBehavior="scene";
+  v.canvas.stage.scale.x=2;
+  v.module.api.handleNpcSpeaking({
+    type:"npc-speaking",sceneId:"scene1",tokenId:"tok1",speaking:true
+  });
+  assert.equal(v.nodes[0].style.left,"370px"); // 2*(150+35)
+  assert.equal(v.nodes[0].style.top,"374px");  // 2*(200-13)
+  assert.equal(v.nodes[0].style["--tt-scale"],"3.5");
   assert.deepEqual(v.errors,[]);
 });

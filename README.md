@@ -1,4 +1,4 @@
-# Talking Tokens V14 — v0.2.5 Beta
+# Talking Tokens V14 — v0.2.6 Beta
 
 **Talking Tokens** is a Foundry VTT V14 module that displays speech indicators over character tokens. The original **Test** button was confirmed working in the Averis D&D campaign. The v0.2.x features are packaged for live testing.
 
@@ -135,3 +135,18 @@ The GM voice bar can still be hidden with **Shift+H** (voice routing stays activ
 ## v0.2.5 — Voice bubble fix
 
 Fixes a JavaScript ReferenceError introduced by v0.2.4 global positioning: `cfg` is now correctly initialized in `Tokens.draw()`. The error prevented speech bubbles from being positioned after Discord voice events (including GM → NPC mode). Global position/size settings, token overrides and hotkeys remain as before. No change to the external Discord Bridge is needed. The automated smoke tests exercise both player and NPC speaking with global offsets and scales.
+
+
+## v0.2.6 — Camera zoom fix
+
+Talking bubbles are positioned as HTML overlays above the Foundry canvas. The previous global offsets were applied to **scene coordinates**, so panning/zooming moved the bubble farther from its token as the camera scale changed.
+
+Global and per-token offsets are now treated as **screen-pixel offsets**, applied **after** the token's world point is projected to the screen. This keeps their spacing predictable at different Foundry canvas zoom levels. Dragging in the Shift+B editor now records pixel deltas too.
+
+**New setting: Zoom behavior**
+- **Fixed size on screen (default)**: Bubble keeps exactly the configured screen size and screen-pixel offset while tokens grow/shrink with map zoom.
+- **Follow map zoom**: Bubble and its offset scale with the map, keeping their relative proportions to tokens.
+
+Use **Game Settings → Talking Tokens V14 → Bubble Settings → Zoom behavior**. Your existing global Scale setting and Move / Resize (Shift+B) work in either mode.
+
+This update keeps all existing settings and the Discord Bridge unchanged. Previous saved world-unit offsets are read as pixels; if you adjusted offsets in v0.2.3–v0.2.5, you may need to fine-tune once with Shift+B.

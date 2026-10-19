@@ -60,6 +60,11 @@
         </select>
       </label>
       <label>Scale <input name="scale" type="number" min="0.5" max="3" step="0.1" value="{{cfg.scale}}"></label>
+      <label>Zoom behavior
+        <select name="zoomBehavior">
+          {{#each zoomBehaviors}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+        </select>
+      </label>
       <label>Bubble hold (ms) <input name="holdMs" type="number" min="300" max="10000" step="100" value="{{cfg.holdMs}}"></label>
       <label class="tt-show-gm"><input type="checkbox" name="showForGM" {{#if cfg.showForGM}}checked{{/if}}> Show for GM</label>
     </div>

@@ -13,6 +13,10 @@ class TalkingBubblePositionEditor {
   static MAX_SCALE=3;
 
   static cfg(){return game.settings.get(TT_BUBBLE_ID,"config");}
+  static zoom(){
+    const z=Number(canvas.stage?.scale?.x);
+    return Number.isFinite(z)&&z>0?z:1;
+  }
   static clampScale(v){return Math.max(this.MIN_SCALE,Math.min(this.MAX_SCALE,Math.round(v*20)/20));}
   static offset(o){return {x:Number(o?.x)||0,y:Number(o?.y)||0};}
 
@@ -157,12 +161,10 @@ class TalkingBubblePositionEditor {
   static begin(e,type){
     const entry=this.active;
     if(!entry || e.button!==0)return;
-    const world=this.toWorld(e.clientX,e.clientY);
-    if(!world)return;
+    if(!this.board())return;
     e.preventDefault();e.stopPropagation();
     entry.drag={type,pointerId:e.pointerId,
       clientX:e.clientX,clientY:e.clientY,
-      worldX:world.x,worldY:world.y,
       originOffset:this.offset(entry.offset),originScale:entry.scale};
     try{entry.element.setPointerCapture(e.pointerId);}catch(_){}
     entry.element.classList.add("is-dragging");
@@ -173,11 +175,12 @@ class TalkingBubblePositionEditor {
     if(!entry?.drag || e.pointerId!==entry.drag.pointerId)return;
     const drag=entry.drag;
     if(drag.type==="move"){
-      const world=this.toWorld(e.clientX,e.clientY);
-      if(!world)return;
+      // Pointer deltas are already screen pixels. Do not convert through the
+      // stage transform or saved offsets will jump with camera zoom.
+      const z=this.cfg().zoomBehavior==="scene"?this.zoom():1;
       entry.offset={
-        x:Math.max(-this.MAX_OFFSET,Math.min(this.MAX_OFFSET,Math.round(drag.originOffset.x+world.x-drag.worldX))),
-        y:Math.max(-this.MAX_OFFSET,Math.min(this.MAX_OFFSET,Math.round(drag.originOffset.y+world.y-drag.worldY)))
+        x:Math.max(-this.MAX_OFFSET,Math.min(this.MAX_OFFSET,Math.round(drag.originOffset.x+(e.clientX-drag.clientX)/z))),
+        y:Math.max(-this.MAX_OFFSET,Math.min(this.MAX_OFFSET,Math.round(drag.originOffset.y+(e.clientY-drag.clientY)/z)))
       };
     }else{
       // Horizontal-right or diagonal-up drag increases scale.
@@ -244,7 +247,7 @@ class TalkingBubblePositionEditor {
   static updatePreview(){
     const entry=this.active;
     if(!entry)return;
-    entry.element.style.setProperty("--tt-scale",String(entry.scale));
+    entry.element.style.setProperty("--tt-scale",String(entry.scale*(this.cfg().zoomBehavior==="scene"?this.zoom():1)));
     entry.percent.textContent=Math.round(entry.scale*100)+"%";
     this.positionPreview();
   }
@@ -268,11 +271,12 @@ class TalkingBubblePositionEditor {
     else if(cfg.position==="below"){py=y+h;anchor="below";}
     const global=entry.scope==="global"?entry.offset:this.offset(cfg.globalBubbleOffset);
     const local=entry.scope==="token"?entry.offset:this.offset(token.document.getFlag(TT_BUBBLE_ID,"bubbleOffset"));
-    px+=global.x+local.x;
-    py+=global.y+local.y;
     const p=canvas.stage.toGlobal({x:px,y:py});
-    entry.element.style.left=(b.rect.left+p.x*b.sx)+"px";
-    entry.element.style.top=(b.rect.top+p.y*b.sy)+"px";
+    const z=cfg.zoomBehavior==="scene"?this.zoom():1;
+    entry.element.style.left=(b.rect.left+p.x*b.sx+(global.x+local.x)*z)+"px";
+    entry.element.style.top=(b.rect.top+p.y*b.sy+(global.y+local.y)*z)+"px";
+    // Keep the editor preview consistent if zoom changes while editing.
+    entry.element.style.setProperty("--tt-scale",String(entry.scale*z));
     entry.element.dataset.anchor=anchor;
   }
 

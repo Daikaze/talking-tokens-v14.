@@ -3,12 +3,20 @@ const CH="module."+ID;
 const DEFAULT={
   bridgeEnabled:false,bridgeUrl:"ws://127.0.0.1:47944",
   style:"speech",position:"above",scale:1,holdMs:2200,showForGM:false,
-  imagePath:"",animation:"pulse",mappings:{},globalBubbleOffset:{x:0,y:0}
+  imagePath:"",animation:"pulse",mappings:{},globalBubbleOffset:{x:0,y:0},zoomBehavior:"fixed"
 };
 const STYLES={speech:"● ● ●",chat:"•••",thought:"•••",shout:"!",whisper:"…",emote:"✦"};
 const STYLE_LABELS={speech:"Classic",chat:"Chat",thought:"Thought",shout:"Shout",whisper:"Whisper",emote:"Magic"};
 const POSITIONS=["above","topLeft","topRight","left","right","below"];
 const ANIMATIONS=["pulse","float","bounce","glow","none"];
+const ZOOM_BEHAVIORS={
+  fixed:"Fixed size on screen — no zoom resizing",
+  scene:"Follow map zoom — stay proportional to tokens"
+};
+function stageZoom(){
+  const z=Number(canvas.stage?.scale?.x);
+  return Number.isFinite(z)&&z>0?z:1;
+}
 const COLOR=/^#[0-9a-f]{6}$/i;
 function imagePath(value) {
   const path=String(value||"").trim();
@@ -34,6 +42,7 @@ class Settings extends foundry.applications.api.HandlebarsApplicationMixin(found
     return {...data,cfg,
       bridgeStatus:Tokens.bridgeStatus,
       animations:ANIMATIONS.map(id=>({id,selected:id===(cfg.animation||"pulse")})),
+      zoomBehaviors:Object.entries(ZOOM_BEHAVIORS).map(([id,label])=>({id,label,selected:id===(cfg.zoomBehavior||"fixed")})),
       styles:Object.keys(STYLES).map(id=>({id,label:STYLE_LABELS[id],symbol:STYLES[id],selected:id===cfg.style})),
       selectedStyle:STYLE_LABELS[cfg.style]||"Classic",
       selectedSymbol:STYLES[cfg.style]||STYLES.speech,
@@ -114,6 +123,7 @@ class Settings extends foundry.applications.api.HandlebarsApplicationMixin(found
         style:STYLES[f.get("style")]?f.get("style"):"speech",
         position:POSITIONS.includes(f.get("position"))?f.get("position"):"above",
         scale:Math.max(.5,Math.min(3,Number(f.get("scale"))||1)),
+        zoomBehavior:Object.hasOwn(ZOOM_BEHAVIORS,f.get("zoomBehavior"))?f.get("zoomBehavior"):"fixed",
         holdMs:Math.max(300,Math.min(10000,Number(f.get("holdMs"))||2200)),
         showForGM:f.has("showForGM"),
         imagePath:imagePath(f.get("imagePath")),
@@ -320,17 +330,21 @@ class Tokens{
         const editor=game.modules.get(ID)?.api?.bubbleEditor;
         const local=t.document?.getFlag?.(ID,"bubbleOffset")||{};
         const globalOffset=cfg.globalBubbleOffset||{};
-        px+=(Number(globalOffset.x)||0)+(Number(local.x)||0);
-        py+=(Number(globalOffset.y)||0)+(Number(local.y)||0);
-        // Scene offset affects all token bubbles; token flags remain optional adjustments.
+        // Transform the token anchor with canvas zoom, but apply user-set
+        // offsets *afterwards* in CSS pixels. This prevents the bubble
+        // wandering far from the token when zooming in or out.
+        const p=canvas.stage.toGlobal({x:px,y:py});
+        const z=cfg.zoomBehavior==="scene"?stageZoom():1;
+        const dx=((Number(globalOffset.x)||0)+(Number(local.x)||0))*z;
+        const dy=((Number(globalOffset.y)||0)+(Number(local.y)||0))*z;
+        // HTML overlays are attached to document.body, outside PIXI's
+        // transformed scene. Fixed mode uses a stable pixel scale.
         const tokenScale=Number(t.document?.getFlag?.(ID,"bubbleScale"));
         const effectiveScale=tokenScale>=0.5&&tokenScale<=3?tokenScale:cfg.scale;
-        it.el.style.setProperty("--tt-scale",String(effectiveScale||1));
-        // Hide the live bubble while editing this token to avoid a duplicate.
+        it.el.style.setProperty("--tt-scale",String((effectiveScale||1)*z));
         it.el.style.visibility=editor?.isEditingToken?.(t) ? "hidden" : "visible";
-        const p=canvas.stage.toGlobal({x:px,y:py});
-        it.el.style.left=(rect.left+p.x*sx)+"px";
-        it.el.style.top=(rect.top+p.y*sy)+"px";
+        it.el.style.left=(rect.left+p.x*sx+dx)+"px";
+        it.el.style.top=(rect.top+p.y*sy+dy)+"px";
         it.el.dataset.anchor=anchor;
       }
     }catch(error){
