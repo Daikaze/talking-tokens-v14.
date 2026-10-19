@@ -78,6 +78,12 @@ class Settings extends foundry.applications.api.HandlebarsApplicationMixin(found
         if(previewLabel)previewLabel.textContent=STYLE_LABELS[style];
       });
     }
+    form.querySelector('[data-tt-gm-npc-toggle]')?.addEventListener("click",()=>{
+      game.modules.get(ID)?.api?.gmNpc?.toggleTarget();
+    });
+    form.querySelector('[data-tt-gm-npc-stop]')?.addEventListener("click",()=>{
+      game.modules.get(ID)?.api?.gmNpc?.deactivate();
+    });
     form.addEventListener("submit",async e=>{
       e.preventDefault();
       if(!game.user.isGM)return;
@@ -180,6 +186,8 @@ class Tokens{
   }
   static fromBridge(message){
     if(!game.user.isGM||message?.type!=="speaking")return;
+    // Let the optional GM-to-NPC controller route the GM speaker before normal actor mapping.
+    if(Hooks.call("talking-tokens-v14.gmVoicePacket",message)===false)return;
     const cfg=this.config();
     let id=message.userId&&game.users.has(message.userId)?message.userId:null;
     if(!id&&message.discordId){
@@ -234,6 +242,17 @@ class Tokens{
     if(!this.frame)this.loop();
   }
   static handle(p){
+    if(p?.type==="npc-speaking"){
+      // Scene-local token ID means the correct NPC is shown even with multiple tokens
+      // representing the same Actor. Each player resolves the token on their own canvas.
+      if(!canvas?.ready || p.sceneId!==canvas.scene?.id || typeof p.tokenId!=="string")return;
+      const key="npc:"+p.tokenId;
+      if(!p.speaking){this.hide(key);return;}
+      const token=canvas.tokens?.get?.(p.tokenId)
+        || canvas.tokens?.placeables.find(t=>t.document?.id===p.tokenId);
+      if(token && token.visible!==false)this.show(key,token);
+      return;
+    }
     if(p?.type!=="speaking")return;
     const cfg=this.config(),u=game.users.get(p.userId);
     if(!u)return;
@@ -380,7 +399,8 @@ Hooks.once("ready",()=>{
     openSettings:()=>Tokens.open(),
     test:userId=>Tokens.test(userId),
     setSpeakingForUser:(id,speaking=true)=>Tokens.relay(id,speaking),
-    receiveBridgeMessage:m=>Tokens.fromBridge(m)
+    receiveBridgeMessage:m=>Tokens.fromBridge(m),
+    handleNpcSpeaking:p=>Tokens.handle(p)
   };
   Tokens.restartBridge();
 });

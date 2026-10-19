@@ -8,6 +8,16 @@
     <label>WebSocket URL <input name="bridgeUrl" value="{{cfg.bridgeUrl}}"></label>
     <p class="hint">The green indicator means the bridge reports that Discord voice is ready. Keep the Windows helper open during your D&amp;D session.</p>
   </section>
+  <section class="tt-gm-npc-help">
+    <h2><i class="fas fa-microphone-lines"></i> GM → NPC Voice Mode</h2>
+    <p>Select <strong>one NPC token</strong> on your current scene, then press <strong>Shift+N</strong> (or use the button below) to route your own Discord voice to that token. Selecting a different NPC and pressing Shift+N switches the target. Press Shift+N on the same NPC again to stop.</p>
+    <p><strong>Important:</strong> Put <strong>your own Discord User ID</strong> in your Foundry GM user row below, even if "Show for GM" is disabled.</p>
+    <p>For manual speech, <strong>hold Shift+M</strong> or the floating "Hold to Talk" button. This shows the NPC's bubble without needing Discord.</p>
+    <div class="tt-gm-npc-actions">
+      <button type="button" data-tt-gm-npc-toggle><i class="fas fa-microphone"></i> Toggle selected NPC</button>
+      <button type="button" data-tt-gm-npc-stop><i class="fas fa-stop"></i> Stop NPC Mode</button>
+    </div>
+  </section>
   <section class="tt-style-settings">
     <h2>Bubble Settings</h2>
     <div class="tt-choose-label">Choose a bubble style</div>

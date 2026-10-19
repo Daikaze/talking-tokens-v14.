@@ -1,6 +1,6 @@
-# Talking Tokens V14 — v0.2.0 Beta
+# Talking Tokens V14 — v0.2.1 Beta
 
-**Talking Tokens** is a Foundry VTT V14 module that displays speech indicators over character tokens. The original **Test** button was confirmed working in the Averis D&D campaign. The new v0.2.0 features are packaged for live testing.
+**Talking Tokens** is a Foundry VTT V14 module that displays speech indicators over character tokens. The original **Test** button was confirmed working in the Averis D&D campaign. The v0.2.x features are packaged for live testing.
 
 ## Install or update Foundry
 
@@ -65,3 +65,24 @@ Use **Test** to check bubbles without Discord. If the test works but voice does 
 The receiving/speaking feature uses Discord voice-receive functionality which is not officially stable. Verify in your environment.
 
 Repository: https://github.com/Daikaze/talking-tokens-v14.
+
+
+## New in v0.2.1 — GM → NPC Voice Mode
+
+**Make your NPCs appear to speak while you talk as GM:**
+
+1. As GM, put the **Discord User ID of your own account** into your GM player row in Talking Tokens settings; save. You do NOT need to enable "Show for GM".
+2. Select **exactly one NPC token** on the current scene.
+3. Press **Shift+N** to arm that NPC. A small GM-only panel appears with its name and a Stop button.
+4. **Talk normally in Discord** (with the existing Windows bridge connected). Your voice triggers that NPC bubble instead of the GM's character bubble. Players see the NPC talking.
+5. Press **Shift+N** again with the same token selected, or click **Stop**, to disable. Select a different NPC and Shift+N to switch NPCs.
+
+**Manual mode (no Discord needed):** After arming an NPC with Shift+N, hold **Shift+M** (or hold the panel's **Hold to Talk** button) to show its bubble. Release to stop. Keep Foundry focused for keyboard shortcuts.
+
+The **Token Controls** menu has a **GM → NPC Voice** button as an alternative to Shift+N. The module settings also include Toggle and Stop buttons.
+
+To customize keybinds, open **Game Settings → Configure Controls → Talking Tokens V14**.
+
+The targeting uses the placed token's ID, so separate NPC instances can speak independently. When you leave the scene, the NPC mode disengages automatically. The hotkeys are only available to GMs. The selected NPC does not need a Discord ID of its own, since it speaks through your account.
+
+**Note:** Discord must be connected for automatic voice activity. The manual Shift+M control works without a bot. This is a beta feature that should be verified with real players.

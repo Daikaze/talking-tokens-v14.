@@ -253,3 +253,34 @@
   .tt-form .tt-user {grid-template-columns:1fr 1fr;gap:10px;}
   .tt-form .tt-user-options {grid-column:1/-1;}
 }
+
+
+/* GM → NPC Voice Mode — only rendered in the GM's browser. */
+#tt-gm-npc-hud {
+  position:fixed; left:255px; bottom:14px; z-index:10001;
+  display:flex; gap:9px; align-items:center; flex-wrap:wrap;
+  max-width:calc(100vw - 270px); box-sizing:border-box;
+  padding:8px 11px; border:1px solid #9e7f47; border-radius:12px;
+  background:rgba(28,27,40,.95);color:#fff;
+  box-shadow:0 6px 24px #0008;
+  font:600 13px/1.4 Arial,sans-serif;
+}
+#tt-gm-npc-hud i {color:#e4bc6d;}
+#tt-gm-npc-hud.is-speaking {border-color:#35c770;box-shadow:0 0 0 2px #2c9e5b88;}
+#tt-gm-npc-hud .tt-gm-npc-name {white-space:nowrap;}
+#tt-gm-npc-hud button {
+  display:inline-block;width:auto;min-width:0;height:auto;line-height:1.2;
+  padding:7px 10px; margin:0;border-radius:7px;
+  background:#494050;color:white;border:1px solid #b2a3c5;
+  cursor:pointer;
+}
+#tt-gm-npc-hud .tt-gm-npc-talk {background:#345d4d;border-color:#70b79d;touch-action:none;}
+#tt-gm-npc-hud .tt-gm-npc-talk:active {background:#2f966e;}
+#tt-gm-npc-hud .tt-gm-npc-stop {background:#5b323b;border-color:#ae727c;}
+.tt-gm-npc-help {
+  margin:5px 0 8px;
+  padding:10px;border:1px solid #927a5a;
+  border-radius:7px;background:rgba(241,187,80,.08);
+}
+.tt-gm-npc-actions {display:flex;gap:9px;flex-wrap:wrap;margin-top:9px;}
+.tt-gm-npc-actions button {width:auto;padding:7px 12px;}

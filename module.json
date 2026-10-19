@@ -1,8 +1,8 @@
 {
   "id": "talking-tokens-v14",
   "title": "Talking Tokens V14 (Beta)",
-  "description": "Animated speech bubbles for Foundry VTT V14 with custom artwork, per-player styles, voice smoothing and Discord bridge status.",
-  "version": "0.2.0",
+  "description": "Animated speech bubbles for Foundry VTT V14 with custom artwork, per-player styles, voice smoothing and Discord bridge status. GM-to-NPC voice routing with customizable Foundry hotkeys.",
+  "version": "0.2.1",
   "authors": [
     {
       "name": "Averis Campaign"
@@ -13,7 +13,8 @@
     "verified": "14"
   },
   "esmodules": [
-    "scripts/main.js"
+    "scripts/main.js",
+    "scripts/gm-npc.js"
   ],
   "styles": [
     "styles/main.css"
@@ -21,5 +22,5 @@
   "socket": true,
   "url": "https://github.com/Daikaze/talking-tokens-v14.",
   "manifest": "https://github.com/Daikaze/talking-tokens-v14./releases/latest/download/module.json",
-  "download": "https://github.com/Daikaze/talking-tokens-v14./releases/download/v0.2.0/module.zip"
+  "download": "https://github.com/Daikaze/talking-tokens-v14./releases/download/v0.2.1/module.zip"
 }
