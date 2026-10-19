@@ -1,4 +1,4 @@
-# Talking Tokens V14 — v0.2.4 Beta
+# Talking Tokens V14 — v0.2.5 Beta
 
 **Talking Tokens** is a Foundry VTT V14 module that displays speech indicators over character tokens. The original **Test** button was confirmed working in the Averis D&D campaign. The v0.2.x features are packaged for live testing.
 
@@ -130,3 +130,8 @@ Optional: In the floating editor's **Apply to** dropdown, choose **This token on
 Global offset **adds** to existing per-token offsets from v0.2.3 so all bubbles move when you adjust the global position. If an old token still appears offset from the rest, choose **This token only → Reset** once for that token.
 
 The GM voice bar can still be hidden with **Shift+H** (voice routing stays active). Discord Bridge does **not** need to be reinstalled. Position and resize controls work without Discord.
+
+
+## v0.2.5 — Voice bubble fix
+
+Fixes a JavaScript ReferenceError introduced by v0.2.4 global positioning: `cfg` is now correctly initialized in `Tokens.draw()`. The error prevented speech bubbles from being positioned after Discord voice events (including GM → NPC mode). Global position/size settings, token overrides and hotkeys remain as before. No change to the external Discord Bridge is needed. The automated smoke tests exercise both player and NPC speaking with global offsets and scales.

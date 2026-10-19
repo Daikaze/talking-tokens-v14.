@@ -8,6 +8,7 @@ on:
       - "scripts/**"
       - "templates/**"
       - "styles/**"
+      - "tests/**"
       - "bridge/**"
       - ".github/workflows/release.yml"
   workflow_dispatch:
@@ -29,6 +30,9 @@ jobs:
           node --version
           node --check bridge/bridge.mjs
           node --check scripts/main.js
+          node --check scripts/gm-npc.js
+          node --check scripts/bubble-editor.js
+          node --test tests/smoke.mjs
       - name: Build both release downloads
         shell: bash
         run: |

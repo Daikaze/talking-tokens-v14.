@@ -302,7 +302,10 @@ class Tokens{
     const screen=canvas.app?.renderer?.screen;
     const sx=rect.width/(screen?.width || board.width || rect.width);
     const sy=rect.height/(screen?.height || board.height || rect.height);
-    const pos=this.config().position;
+    // Always capture the same world configuration for both anchor and
+    // global offset. The former v0.2.4 used cfg without defining it.
+    const cfg=this.config();
+    const pos=cfg.position;
     try{
       for(const [id,it] of this.elements){
         const t=it.token;
