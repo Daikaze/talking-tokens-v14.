@@ -1,12 +1,12 @@
-# Talking Tokens V14 — v0.2.6 Beta
+# Talking Tokens V13 — v0.2.7 Beta
 
-**Talking Tokens** is a Foundry VTT V14 module that displays speech indicators over character tokens. The original **Test** button was confirmed working in the Averis D&D campaign. The v0.2.x features are packaged for live testing.
+**Talking Tokens** is a Foundry VTT V13 module that displays speech indicators over character tokens. The original **Test** button was confirmed working in the Averis D&D campaign. The v0.2.x features are packaged for live testing.
 
 ## Install or update Foundry
 
 Go to **Add-on Modules → Install Module → Manifest URL**:
 
-https://github.com/Daikaze/talking-tokens-v14./releases/latest/download/module.json
+https://raw.githubusercontent.com/Daikaze/talking-tokens-v14./foundry-v13/module.json
 
 If already installed, use **Check for Updates → Update**, then restart Foundry and reopen the world.
 
@@ -32,9 +32,9 @@ Click **Save Settings** to apply changes. Click the **Test** button next to a pl
 
 The bridge must run as a **separate program** on the PC where the GM opens Foundry. GitHub stores and distributes it but does not keep a bot online.
 
-Download `discord-bridge.zip` from the **latest Release**:
+Download `discord-bridge.zip` from the **Foundry v13 release**:
 
-https://github.com/Daikaze/talking-tokens-v14./releases/latest
+https://github.com/Daikaze/talking-tokens-v14./releases/tag/foundry-v13-v0.2.7
 
 For step-by-step setup, see [bridge/README.md](bridge/README.md). The bridge needs Node.js 24.17.0+, Discord bot credentials stored locally in `.env`, a server ID and the voice-channel ID. Keep the helper running during the session.
 
@@ -81,7 +81,7 @@ Repository: https://github.com/Daikaze/talking-tokens-v14.
 
 The **Token Controls** menu has a **GM → NPC Voice** button as an alternative to Shift+N. The module settings also include Toggle and Stop buttons.
 
-To customize keybinds, open **Game Settings → Configure Controls → Talking Tokens V14**.
+To customize keybinds, open **Game Settings → Configure Controls → Talking Tokens V13**.
 
 The targeting uses the placed token's ID, so separate NPC instances can speak independently. When you leave the scene, the NPC mode disengages automatically. The hotkeys are only available to GMs. The selected NPC does not need a Discord ID of its own, since it speaks through your account.
 
@@ -89,7 +89,7 @@ The targeting uses the placed token's ID, so separate NPC instances can speak in
 
 ### v0.2.2 hotkey reliability
 
-Shortcuts use Foundry V14's official modifier key constants. The manual speaking indicator also switches off on key release or when the Foundry window loses focus. The configured shortcuts can be changed under Configure Controls.
+Shortcuts use Foundry V13's Shift modifier. The manual speaking indicator also switches off on key release or when the Foundry window loses focus. The configured shortcuts can be changed under Configure Controls.
 
 
 ## v0.2.3 — Drag to move bubble / Hide GM voice bar
@@ -111,7 +111,7 @@ The offset is measured in scene units and tracks token movement and canvas zoom.
 - Or open **Game Settings → Module Settings → Show GM → NPC floating voice bar** and change the checkbox.
 - Your current NPC voice routing remains active when the bar is hidden. Use Shift+N to stop or switch NPCs; hold Shift+M to speak manually even without the bar. Press Shift+H to restore the bar.
 
-All three hotkeys are editable in **Game Settings → Configure Controls → Talking Tokens V14**. Bubble offset and position editor are GM-only; there is no need to change the Discord Bridge.
+All three hotkeys are editable in **Game Settings → Configure Controls → Talking Tokens V13**. Bubble offset and position editor are GM-only; there is no need to change the Discord Bridge.
 
 
 ## v0.2.4 — GLOBAL bubble positioning + DIRECT resize
@@ -147,6 +147,6 @@ Global and per-token offsets are now treated as **screen-pixel offsets**, applie
 - **Fixed size on screen (default)**: Bubble keeps exactly the configured screen size and screen-pixel offset while tokens grow/shrink with map zoom.
 - **Follow map zoom**: Bubble and its offset scale with the map, keeping their relative proportions to tokens.
 
-Use **Game Settings → Talking Tokens V14 → Bubble Settings → Zoom behavior**. Your existing global Scale setting and Move / Resize (Shift+B) work in either mode.
+Use **Game Settings → Talking Tokens V13 → Bubble Settings → Zoom behavior**. Your existing global Scale setting and Move / Resize (Shift+B) work in either mode.
 
 This update keeps all existing settings and the Discord Bridge unchanged. Previous saved world-unit offsets are read as pixels; if you adjusted offsets in v0.2.3–v0.2.5, you may need to fine-tune once with Shift+B.

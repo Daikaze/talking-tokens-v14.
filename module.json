@@ -1,16 +1,17 @@
 {
   "id": "talking-tokens-v14",
-  "title": "Talking Tokens V14 (Beta)",
-  "description": "Foundry V14 talking bubbles: Discord voice detection, GM-NPC voice routing, global drag-to-position and live resize.",
-  "version": "0.2.6",
+  "title": "Talking Tokens V13 (Beta)",
+  "description": "Foundry V13 talking bubbles: Discord voice detection, GM-NPC voice routing, global drag-to-position and live resize.",
+  "version": "0.2.7",
   "authors": [
     {
       "name": "Averis Campaign"
     }
   ],
   "compatibility": {
-    "minimum": "14",
-    "verified": "14"
+    "minimum": "13",
+    "maximum": "13",
+    "verified": "13"
   },
   "esmodules": [
     "scripts/main.js",
@@ -22,6 +23,6 @@
   ],
   "socket": true,
   "url": "https://github.com/Daikaze/talking-tokens-v14.",
-  "manifest": "https://github.com/Daikaze/talking-tokens-v14./releases/latest/download/module.json",
-  "download": "https://github.com/Daikaze/talking-tokens-v14./releases/download/v0.2.6/module.zip"
+  "manifest": "https://raw.githubusercontent.com/Daikaze/talking-tokens-v14./foundry-v13/module.json",
+  "download": "https://github.com/Daikaze/talking-tokens-v14./releases/download/foundry-v13-v0.2.7/module.zip"
 }

@@ -25,7 +25,7 @@ function sandbox() {
     ready:true,scene,
     tokens:{placeables:[token],get:id=>id==="tok1"?token:null},
     app:{
-      canvas:{getBoundingClientRect:()=>({left:0,top:0,width:1000,height:800})},
+      view:{getBoundingClientRect:()=>({left:0,top:0,width:1000,height:800})},
       renderer:{screen:{width:1000,height:800}}
     },
     stage:{scale:{x:1},toGlobal:p=>({x:p.x*canvas.stage.scale.x,y:p.y*canvas.stage.scale.x})}

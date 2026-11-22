@@ -30,7 +30,7 @@ function bubbleColor(value) {
 class Settings extends foundry.applications.api.HandlebarsApplicationMixin(foundry.applications.api.ApplicationV2) {
   static DEFAULT_OPTIONS={
     id:"talking-tokens-v14-settings",
-    window:{title:"Talking Tokens V14",icon:"fa-solid fa-comments",resizable:true},
+    window:{title:"Talking Tokens V13",icon:"fa-solid fa-comments",resizable:true},
     position:{width:790},
     classes:["tt-settings-window"]
   };
@@ -304,8 +304,8 @@ class Tokens{
   }
   static draw(){
     if(!canvas?.ready) return false;
-    // V14 can expose the canvas on app.canvas rather than renderer.canvas.
-    const board=canvas.app?.canvas || canvas.app?.view
+    // Use the Pixi canvas view for scene-to-screen coordinates.
+    const board=canvas.app?.view || canvas.app?.canvas
       || canvas.app?.renderer?.canvas || document.querySelector("canvas#board");
     const rect=board?.getBoundingClientRect?.();
     if(!rect || !rect.width || !rect.height) return false;
@@ -430,7 +430,7 @@ class Tokens{
 
 Hooks.once("init",()=>{
   game.settings.register(ID,"config",{name:"Talking Tokens settings",scope:"world",config:false,type:Object,default:DEFAULT});
-  game.settings.registerMenu(ID,"settings",{name:"Talking Tokens V14",label:"Open Settings",hint:"Speaker-to-actor mapping and bubble options",
+  game.settings.registerMenu(ID,"settings",{name:"Talking Tokens V13",label:"Open Settings",hint:"Speaker-to-actor mapping and bubble options",
     icon:"fas fa-comments",type:Settings,restricted:true});
 });
 Hooks.once("ready",()=>{

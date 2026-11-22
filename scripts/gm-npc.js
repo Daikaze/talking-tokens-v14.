@@ -1,5 +1,5 @@
 /**
- * Talking Tokens — GM -> NPC Voice Mode (Foundry V14)
+ * Talking Tokens — GM -> NPC Voice Mode (Foundry V13)
  * The GM selects exactly one token and arms it with Shift+N (configurable).
  * With Discord connected, GM voice is routed to that token only while speaking.
  * Shift+M is an optional manual push-to-talk indicator (no Discord required).
@@ -203,26 +203,26 @@ Hooks.once("init",()=>{
     scope:"client",config:true,type:Boolean,default:true,
     onChange:()=>GMNpcVoice.renderHUD()
   });
-  // Foundry V14 built-in keybinding manager. Users may remap these keys in
-  // Game Settings > Configure Controls > Talking Tokens V14.
+  // Foundry V13 built-in keybinding manager. Users may remap these keys in
+  // Game Settings > Configure Controls > Talking Tokens V13.
   game.keybindings.register(TT_ID,"toggleGmNpc",{
     name:"GM → NPC Voice Target (Toggle)",
     hint:"Select exactly one token, then toggle automatic GM Discord voice routing.",
-    editable:[{key:"KeyN",modifiers:[foundry.helpers.interaction.KeyboardManager.MODIFIER_KEYS.SHIFT]}],
+    editable:[{key:"KeyN",modifiers:["Shift"]}],
     restricted:true,repeat:false,
     onDown:()=>{if(!game.user.isGM)return false;return GMNpcVoice.toggleTarget();}
   });
   game.keybindings.register(TT_ID,"toggleGmNpcHud",{
     name:"GM → NPC Voice Panel: Show / Hide",
     hint:"Toggle the floating GM voice panel, without stopping speech routing.",
-    editable:[{key:"KeyH",modifiers:[foundry.helpers.interaction.KeyboardManager.MODIFIER_KEYS.SHIFT]}],
+    editable:[{key:"KeyH",modifiers:["Shift"]}],
     restricted:true,repeat:false,
     onDown:()=>GMNpcVoice.toggleHUD()
   });
   game.keybindings.register(TT_ID,"manualGmNpc",{
     name:"GM → NPC Manual Speech (Hold)",
     hint:"Hold to show the selected NPC speaking even without Discord. First arm it with Shift+N.",
-    editable:[{key:"KeyM",modifiers:[foundry.helpers.interaction.KeyboardManager.MODIFIER_KEYS.SHIFT]}],
+    editable:[{key:"KeyM",modifiers:["Shift"]}],
     restricted:true,repeat:false,
     onDown:()=>{if(!game.user.isGM)return false;return GMNpcVoice.startManual();},
     onUp:()=>{if(!game.user.isGM)return false;return GMNpcVoice.stopManual();}

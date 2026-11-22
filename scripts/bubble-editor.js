@@ -141,7 +141,7 @@ class TalkingBubblePositionEditor {
   }
 
   static board(){
-    const node=canvas.app?.canvas||canvas.app?.view||canvas.app?.renderer?.canvas
+    const node=canvas.app?.view||canvas.app?.canvas||canvas.app?.renderer?.canvas
       ||document.querySelector("canvas#board");
     const rect=node?.getBoundingClientRect?.();
     if(!rect?.width||!rect?.height)return null;
@@ -300,7 +300,7 @@ Hooks.once("init",()=>{
   game.keybindings.register(TT_BUBBLE_ID,"moveBubble",{
     name:"GM — Move / Resize ALL Talking Bubbles",
     hint:"Select one token as a preview and press Shift+B. Changes default to Global (all tokens).",
-    editable:[{key:"KeyB",modifiers:[foundry.helpers.interaction.KeyboardManager.MODIFIER_KEYS.SHIFT]}],
+    editable:[{key:"KeyB",modifiers:["Shift"]}],
     restricted:true,repeat:false,
     onDown:()=>TalkingBubblePositionEditor.toggle()
   });

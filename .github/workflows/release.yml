@@ -2,7 +2,7 @@ name: Publish Foundry module and Discord bridge
 
 on:
   push:
-    branches: [main]
+    branches: [foundry-v13]
     paths:
       - "module.json"
       - "scripts/**"
@@ -17,7 +17,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: foundry-release
+  group: foundry-v13-release
   cancel-in-progress: false
 
 jobs:
@@ -46,8 +46,8 @@ jobs:
           version = manifest["version"]
           repo = "https://github.com/Daikaze/talking-tokens-v14."
           manifest["version"] = version
-          manifest["manifest"] = repo + "/releases/latest/download/module.json"
-          manifest["download"] = repo + "/releases/download/v" + version + "/module.zip"
+          assert manifest["manifest"] == "https://raw.githubusercontent.com/Daikaze/talking-tokens-v14./foundry-v13/module.json"
+          assert manifest["download"] == repo + "/releases/download/foundry-v13-v" + version + "/module.zip"
           payload = json.dumps(manifest, indent=2, ensure_ascii=False) + "\n"
           (out / "module.json").write_text(payload, encoding="utf-8")
           with zipfile.ZipFile(out / "module.zip", "w", compression=zipfile.ZIP_DEFLATED) as archive:
@@ -64,15 +64,15 @@ jobs:
                   f = base / "bridge" / filename
                   assert f.is_file(), f"Required file missing: {f}"
                   archive.write(f, filename)
-          print("Packaged Talking Tokens V14", version, "and Windows bridge")
+          print("Packaged Talking Tokens V13", version, "and Windows bridge")
           PY
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=$(python3 -c 'import json;print(json.load(open("dist/module.json"))["version"])')
-          gh release create "v$VERSION" \
+          gh release create "foundry-v13-v$VERSION" --target "$GITHUB_SHA" \
             dist/module.json dist/module.zip dist/discord-bridge.zip \
             --title "Talking Tokens v$VERSION (Beta)" \
-            --notes "Foundry V14 module + local Windows Discord voice bridge beta. Install the module in Foundry using the manifest URL; download discord-bridge.zip separately for the GM's PC." \
-            --latest
+            --notes "Foundry V13 module + local Windows Discord voice bridge beta. Install the module in Foundry using the manifest URL; download discord-bridge.zip separately for the GM's PC." \
+            --latest=false

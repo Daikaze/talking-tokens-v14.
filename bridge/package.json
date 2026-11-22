@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Local Discord voice speaking event relay for Talking Tokens Foundry V14",
+  "description": "Local Discord voice speaking event relay for Talking Tokens Foundry V13",
   "engines": {
     "node": ">=24.17.0"
   },

@@ -1,4 +1,4 @@
-# Discord Voice Bridge — Talking Tokens V14 (Windows)
+# Discord Voice Bridge — Talking Tokens V13 (Windows)
 
 This folder is a **separate program** from the Foundry module. It runs on the GM's PC and sends Discord speaking indicators to Foundry. You **must keep it running while playing**.
 
@@ -40,8 +40,8 @@ This folder is a **separate program** from the Foundry module. It runs on the GM
 
 ## Connect Foundry to the bridge
 
-1. Open Foundry V14 as GM in a browser **on the same PC** where the helper runs.
-2. In **Talking Tokens V14 → Open Settings**, check **Connect to external voice bridge**.
+1. Open Foundry V13 as GM in a browser **on the same PC** where the helper runs.
+2. In **Talking Tokens V13 → Open Settings**, check **Connect to external voice bridge**.
 3. Keep `ws://127.0.0.1:47944` as the WebSocket URL, then save.
 4. For each player, map a Foundry user to the character Actor and put that Actor's token on the current scene.
 5. In Discord, right-click each player's name → **Copy User ID** (Developer Mode required). Paste into that player's **Discord ID** box in Foundry and save.
