@@ -46,7 +46,7 @@ jobs:
           version = manifest["version"]
           repo = "https://github.com/Daikaze/talking-tokens-v14."
           manifest["version"] = version
-          manifest["manifest"] = repo + "/releases/latest/download/module.json"
+          manifest["manifest"] = "https://raw.githubusercontent.com/Daikaze/talking-tokens-v14./main/module.json"
           manifest["download"] = repo + "/releases/download/v" + version + "/module.zip"
           payload = json.dumps(manifest, indent=2, ensure_ascii=False) + "\n"
           (out / "module.json").write_text(payload, encoding="utf-8")
