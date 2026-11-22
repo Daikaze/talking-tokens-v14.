@@ -1,4 +1,4 @@
-# Talking Tokens V14 — v0.2.6 Beta
+# Talking Tokens V14 — v0.2.8 Beta
 
 **Talking Tokens** is a Foundry VTT V14 module that displays speech indicators over character tokens. The original **Test** button was confirmed working in the Averis D&D campaign. The v0.2.x features are packaged for live testing.
 
@@ -6,9 +6,9 @@
 
 Go to **Add-on Modules → Install Module → Manifest URL**:
 
-https://github.com/Daikaze/talking-tokens-v14./releases/latest/download/module.json
+https://raw.githubusercontent.com/Daikaze/talking-tokens-v14./main/module.json
 
-If already installed, use **Check for Updates → Update**, then restart Foundry and reopen the world.
+**Use this stable V14 manifest instead of `releases/latest`:** V13 and V14 publish releases in the same repository, so `latest` can lead to the V13 module. If the existing installation used that URL and cannot update, reinstall the module package using this V14 manifest without deleting your world. Then restart Foundry and reopen the world.
 
 ## What's new in v0.2.0
 
